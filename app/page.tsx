@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 interface CheckResult {
   riskScore: number;
@@ -38,23 +38,59 @@ function RiskBadge({ score }: { score: number }) {
 }
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<"text" | "image">("text");
+  
   const [text, setText] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setImageFile(null);
+      setImagePreview(null);
+    }
+  }
+
   async function handleCheck() {
-    if (!text.trim()) return;
+    if (activeTab === "text" && !text.trim()) return;
+    if (activeTab === "image" && !imageFile) return;
 
     setLoading(true);
     setResult(null);
     setError(null);
 
     try {
+      let payload: any = {};
+      
+      if (activeTab === "text") {
+        payload = { text };
+      } else if (activeTab === "image" && imageFile && imagePreview) {
+        // Strip data:image/...;base64,
+        const base64Data = imagePreview.split(",")[1];
+        payload = {
+          imageBase64: base64Data,
+          mimeType: imageFile.type,
+        };
+      }
+
       const res = await fetch("/api/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -89,33 +125,85 @@ export default function Home() {
             </h1>
           </div>
           <p className="text-slate-400 text-base max-w-md mx-auto leading-relaxed">
-            Paste any suspicious message below and we&apos;ll analyse it for
-            scam red flags — instantly.
+            Paste any suspicious message or upload a screenshot and we&apos;ll analyse it for scam red flags — instantly.
           </p>
         </header>
 
         {/* Input card */}
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 shadow-xl mb-6">
-          <label
-            htmlFor="message-input"
-            className="block text-sm font-semibold text-slate-300 mb-3"
-          >
-            Suspicious message
-          </label>
-          <textarea
-            id="message-input"
-            rows={6}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={`Paste the suspicious message here… e.g. "Your bank account will be blocked. Call 9999-XXXX immediately and share your OTP to verify."`}
-            className="w-full rounded-xl bg-white/5 border border-white/10 text-slate-100 placeholder-slate-500 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none transition"
-          />
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6 border-b border-white/10 pb-4">
+            <button
+              onClick={() => setActiveTab("text")}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                activeTab === "text"
+                  ? "bg-violet-500/20 text-violet-300"
+                  : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+              }`}
+            >
+              Paste Text
+            </button>
+            <button
+              onClick={() => setActiveTab("image")}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                activeTab === "image"
+                  ? "bg-violet-500/20 text-violet-300"
+                  : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+              }`}
+            >
+              Upload Screenshot
+            </button>
+          </div>
+
+          {activeTab === "text" ? (
+            <div>
+              <label
+                htmlFor="message-input"
+                className="block text-sm font-semibold text-slate-300 mb-3"
+              >
+                Suspicious message
+              </label>
+              <textarea
+                id="message-input"
+                rows={6}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder={`Paste the suspicious message here… e.g. "Your bank account will be blocked. Call 9999-XXXX immediately and share your OTP to verify."`}
+                className="w-full rounded-xl bg-white/5 border border-white/10 text-slate-100 placeholder-slate-500 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none transition"
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-semibold text-slate-300 mb-3">
+                Suspicious screenshot
+              </label>
+              <div 
+                className="w-full border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-violet-500/50 hover:bg-white/5 transition-all"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <div className="text-slate-400 text-sm">
+                  {imageFile ? (
+                    <span className="text-violet-300 font-medium">{imageFile.name}</span>
+                  ) : (
+                    <span>Click to browse or drag a screenshot here</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <button
             id="check-button"
             onClick={handleCheck}
-            disabled={loading || !text.trim()}
-            className="mt-4 w-full py-3 rounded-xl font-semibold text-sm tracking-wide transition-all
+            disabled={loading || (activeTab === "text" ? !text.trim() : !imageFile)}
+            className="mt-6 w-full py-3 rounded-xl font-semibold text-sm tracking-wide transition-all
               bg-gradient-to-r from-violet-600 to-red-500 hover:from-violet-500 hover:to-red-400
               disabled:opacity-40 disabled:cursor-not-allowed
               shadow-lg hover:shadow-violet-500/30 active:scale-[0.98]"
@@ -149,11 +237,18 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Image Preview (shown before/with results) */}
+        {activeTab === "image" && imagePreview && result && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 shadow-xl mb-6 flex justify-center animate-fade-in">
+            <img src={imagePreview} alt="Screenshot preview" className="max-h-48 rounded-lg border border-white/20 object-contain" />
+          </div>
+        )}
+
         {/* Error state */}
         {error && (
           <div
             id="error-banner"
-            className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-400 mb-6"
+            className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-400 mb-6 animate-fade-in"
           >
             ⚠️ {error}
           </div>

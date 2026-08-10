@@ -8,14 +8,53 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    if (!body?.text || typeof body.text !== "string" || body.text.trim() === "") {
+    let textToAnalyze = "";
+
+    if (body.imageBase64 && body.mimeType) {
+      // --- Image OCR Phase ---
+      const ocrResponse = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: [
+          {
+            inlineData: {
+              mimeType: body.mimeType,
+              data: body.imageBase64,
+            },
+          },
+          {
+            text: "Extract and return all the text visible in this image. If there is no text at all, output EXACTLY the word: NO_TEXT_FOUND. Do not add any extra commentary.",
+          },
+        ],
+      });
+
+      textToAnalyze = ocrResponse.text || "";
+
+      // Validate extracted text
+      const cleanText = textToAnalyze.trim();
+      if (!cleanText || cleanText.includes("NO_TEXT_FOUND") || cleanText.length < 3) {
+        return NextResponse.json(
+          { error: "No readable text was found in this image. Try a clearer screenshot." },
+          { status: 400 }
+        );
+      }
+    } else if (body.text) {
+      // --- Text Phase ---
+      textToAnalyze = body.text;
+    } else {
       return NextResponse.json(
-        { error: "Missing or empty 'text' field in request body." },
+        { error: "Missing 'text' or 'imageBase64' field in request body." },
         { status: 400 }
       );
     }
 
-    const text = body.text;
+    if (typeof textToAnalyze !== "string" || textToAnalyze.trim() === "") {
+      return NextResponse.json(
+        { error: "Missing or empty text." },
+        { status: 400 }
+      );
+    }
+
+    const text = textToAnalyze.trim();
     const lowerText = text.toLowerCase();
     
     // --- 1. Rule-based checks ---
@@ -64,7 +103,16 @@ ${text}
       },
     });
 
-    const aiResult = JSON.parse(response.text || "{}");
+    const rawText = response.text || "{}";
+    const cleanedJsonText = rawText.replace(/^```json\s*/, "").replace(/```$/, "").trim();
+    
+    let aiResult: any = {};
+    try {
+      aiResult = JSON.parse(cleanedJsonText);
+    } catch (e) {
+      console.error("Failed to parse Gemini output:", cleanedJsonText);
+      aiResult = {};
+    }
     const aiFlags = Array.isArray(aiResult.flags) ? aiResult.flags : [];
     
     // --- 3. Merge flags ---
