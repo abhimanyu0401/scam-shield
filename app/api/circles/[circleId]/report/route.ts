@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as fs from "fs/promises";
-import * as path from "path";
+import { Redis } from '@upstash/redis';
+
+const redis = new Redis({
+  url: process.env.REDIS_KV_REST_API_URL!,
+  token: process.env.REDIS_KV_REST_API_TOKEN!,
+});
 
 export interface CircleReport {
   id: string;
@@ -27,8 +31,6 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const FILE_PATH = path.join(DATA_DIR, "circle-reports.json");
 
 export async function POST(
   req: NextRequest,
@@ -43,22 +45,15 @@ export async function POST(
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Ensure data directory exists
-    try {
-      await fs.access(DATA_DIR);
-    } catch {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-    }
-
     // Read existing reports
     let existingReports: CircleReport[] = [];
     try {
-      const rawData = await fs.readFile(FILE_PATH, "utf8");
-      existingReports = JSON.parse(rawData);
+      const rawData = await redis.lrange(`circle:${circleId}`, 0, -1);
+      existingReports = rawData.map((item: any) => 
+        typeof item === "string" ? JSON.parse(item) : item
+      );
     } catch (err: any) {
-      if (err.code !== "ENOENT") {
-        console.warn("Could not read reports file:", err);
-      }
+      console.warn("Could not read reports from Redis:", err);
     }
 
     const newId = Math.random().toString(36).substring(2, 9);
@@ -96,8 +91,7 @@ export async function POST(
       timestamp: new Date().toISOString(),
     };
 
-    existingReports.push(newReport);
-    await fs.writeFile(FILE_PATH, JSON.stringify(existingReports, null, 2), "utf8");
+    await redis.rpush(`circle:${circleId}`, JSON.stringify(newReport));
 
     return NextResponse.json({ success: true, report: newReport });
   } catch (error: any) {

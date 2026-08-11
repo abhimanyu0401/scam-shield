@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as fs from "fs/promises";
-import * as path from "path";
+import { Redis } from '@upstash/redis';
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const FILE_PATH = path.join(DATA_DIR, "circle-reports.json");
+const redis = new Redis({
+  url: process.env.REDIS_KV_REST_API_URL!,
+  token: process.env.REDIS_KV_REST_API_TOKEN!,
+});
 
 export async function GET(
   req: NextRequest,
@@ -14,16 +15,15 @@ export async function GET(
 
     let existingReports: any[] = [];
     try {
-      const rawData = await fs.readFile(FILE_PATH, "utf8");
-      existingReports = JSON.parse(rawData);
+      const rawData = await redis.lrange(`circle:${circleId}`, 0, -1);
+      existingReports = rawData.map((item: any) => 
+        typeof item === "string" ? JSON.parse(item) : item
+      );
     } catch (err: any) {
-      if (err.code !== "ENOENT") {
-        console.warn("Could not read reports file:", err);
-      }
+      console.warn("Could not read reports from Redis:", err);
     }
 
-    // Filter by circleId
-    const circleReports = existingReports.filter(r => r.circleId === circleId);
+    const circleReports = existingReports;
 
     // Calculate cluster counts
     const clusterCounts: Record<string, number> = {};
