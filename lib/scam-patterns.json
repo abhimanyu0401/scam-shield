@@ -1,0 +1,42 @@
+[
+  {
+    "id": "digital-arrest",
+    "name": "Digital Arrest Scam",
+    "text": "This is a call from the CBI/Customs department. A parcel under your name containing illegal passports and drugs has been intercepted. Your Aadhaar is linked to this money laundering case. Do not disconnect this video call or you will be digitally arrested immediately. Verify your bank balance now."
+  },
+  {
+    "id": "upi-refund",
+    "name": "Fake UPI Refund",
+    "text": "Dear customer, your Rs. 4,500 refund for the failed transaction has been approved. To receive the money in your account, open PhonePe/GPay, enter the PIN, and approve the collect request sent by our customer support. Do it within 10 minutes or the refund will be cancelled."
+  },
+  {
+    "id": "electricity-disconnection",
+    "name": "Fake Electricity Disconnection",
+    "text": "Dear Consumer, your electricity power will be disconnected tonight at 9:30 PM from the electricity office because your previous month bill was not updated. Please immediately contact our electricity officer on 9876543210 to update your bill."
+  },
+  {
+    "id": "courier-customs",
+    "name": "Fake Courier/Customs Fee",
+    "text": "FedEx/BlueDart alert: Your international package is on hold at customs due to unpaid clearance fees. Please click here to pay the Rs. 50 clearance fee online, otherwise the package will be returned to the sender."
+  },
+  {
+    "id": "job-offer",
+    "name": "Job Offer / Task Scam",
+    "text": "Work from home! Earn Rs 2000-5000 daily by just liking YouTube videos and rating Google maps. We are offering a part-time job. To start your first paid task, join our Telegram group and pay a refundable registration fee of Rs 500."
+  },
+  {
+    "id": "kyc-update",
+    "name": "Fake Bank KYC Update",
+    "text": "Dear SBI/HDFC Customer, your bank account will be blocked today due to pending PAN-Aadhaar KYC update. Click the link below to verify your details immediately to avoid account suspension: http://bit.ly/fake-bank-link"
+  },
+  {
+    "id": "loan-approval",
+    "name": "Fake Loan Approval Fee",
+    "text": "Congratulations! Your personal loan of Rs. 5,00,000 is approved under PM scheme at 0% interest. To transfer the amount to your bank account, please pay the processing/file charge of Rs. 2,150 upfront. This is fully refundable."
+  },
+  {
+    "id": "family-emergency",
+    "name": "Family Emergency / AI Voice",
+    "text": "Hello, I am a police officer calling from the local station. Your son/daughter has been detained in an accident case. We can settle this without an FIR if you transfer Rs 25,000 immediately to this UPI number. Don't tell anyone or they will be jailed."
+  }
+]

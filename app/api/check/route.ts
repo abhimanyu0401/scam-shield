@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
+import * as fs from "fs";
+import * as path from "path";
 
 // Initialize Gemini client using the key from .env.local
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// Load precomputed patterns
+let scamPatterns: any[] = [];
+try {
+  const patternsFile = path.join(process.cwd(), "lib", "scam-pattern-embeddings.json");
+  const rawData = fs.readFileSync(patternsFile, "utf8");
+  scamPatterns = JSON.parse(rawData);
+} catch (err) {
+  console.warn("Could not load scam patterns library:", err);
+}
+
+// Cosine similarity function
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -90,6 +116,39 @@ export async function POST(req: NextRequest) {
       ruleFlags.add("Contains link/URL");
     }
 
+    // --- 1.5 Pattern Matching (Embeddings) ---
+    if (scamPatterns.length > 0 && text.length > 10) {
+      try {
+        const embedRes = await ai.models.embedContent({
+          model: "gemini-embedding-001",
+          contents: text,
+          config: {
+            taskType: "RETRIEVAL_QUERY",
+          },
+        });
+        
+        const queryEmbedding = embedRes.embeddings?.[0]?.values;
+        if (queryEmbedding) {
+          let bestMatch = null;
+          let highestSim = -1;
+          
+          for (const pattern of scamPatterns) {
+            const sim = cosineSimilarity(queryEmbedding, pattern.embedding);
+            if (sim > highestSim) {
+              highestSim = sim;
+              bestMatch = pattern;
+            }
+          }
+          
+          if (bestMatch && highestSim > 0.7) {
+            ruleFlags.add(`Matches known pattern: ${bestMatch.name}`);
+          }
+        }
+      } catch (err) {
+        console.warn("Pattern matching failed:", err);
+      }
+    }
+
     // --- 2. Gemini AI Call ---
     const prompt = `Analyze the following message for scam patterns.
 Return a JSON object with EXACTLY the following structure:
@@ -112,6 +171,15 @@ ${text}
       contents: prompt,
       config: {
         responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            riskScore: { type: Type.INTEGER },
+            flags: { type: Type.ARRAY, items: { type: Type.STRING } },
+            explanation: { type: Type.STRING },
+          },
+          required: ["riskScore", "flags", "explanation"],
+        },
       },
     });
 
@@ -123,7 +191,9 @@ ${text}
       aiResult = JSON.parse(cleanedJsonText);
     } catch (e) {
       console.error("Failed to parse Gemini output:", cleanedJsonText);
-      aiResult = {};
+      aiResult = {
+        explanation: "DEBUG ERROR: Failed to parse AI response. Check server logs."
+      };
     }
     const aiFlags = Array.isArray(aiResult.flags) ? aiResult.flags : [];
     
