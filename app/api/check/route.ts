@@ -117,6 +117,8 @@ export async function POST(req: NextRequest) {
     }
 
     // --- 1.5 Pattern Matching (Embeddings) ---
+    let queryEmbedding: number[] | null = null;
+
     if (scamPatterns.length > 0 && text.length > 10) {
       try {
         const embedRes = await ai.models.embedContent({
@@ -127,7 +129,7 @@ export async function POST(req: NextRequest) {
           },
         });
         
-        const queryEmbedding = embedRes.embeddings?.[0]?.values;
+        queryEmbedding = embedRes.embeddings?.[0]?.values || null;
         if (queryEmbedding) {
           let bestMatch = null;
           let highestSim = -1;
@@ -201,9 +203,11 @@ ${text}
     const finalFlags = Array.from(new Set([...ruleFlags, ...aiFlags]));
 
     const finalResponse = {
+      text: text, // provide the analyzed text
       riskScore: typeof aiResult.riskScore === 'number' ? aiResult.riskScore : (ruleFlags.size > 0 ? 50 : 0),
       flags: finalFlags,
       explanation: aiResult.explanation || "No explanation provided.",
+      embedding: queryEmbedding,
     };
 
     return NextResponse.json(finalResponse);

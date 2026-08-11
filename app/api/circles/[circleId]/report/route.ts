@@ -1,0 +1,107 @@
+import { NextRequest, NextResponse } from "next/server";
+import * as fs from "fs/promises";
+import * as path from "path";
+
+export interface CircleReport {
+  id: string;
+  circleId: string;
+  clusterId: string;
+  text: string;
+  riskScore: number;
+  flags: string[];
+  explanation: string;
+  embedding: number[] | null;
+  timestamp: string;
+}
+
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+const DATA_DIR = path.join(process.cwd(), "data");
+const FILE_PATH = path.join(DATA_DIR, "circle-reports.json");
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ circleId: string }> }
+) {
+  try {
+    const { circleId } = await params;
+    const body = await req.json();
+    const { text, riskScore, flags, explanation, embedding } = body;
+
+    if (!text || typeof riskScore !== "number") {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Ensure data directory exists
+    try {
+      await fs.access(DATA_DIR);
+    } catch {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+    }
+
+    // Read existing reports
+    let existingReports: CircleReport[] = [];
+    try {
+      const rawData = await fs.readFile(FILE_PATH, "utf8");
+      existingReports = JSON.parse(rawData);
+    } catch (err: any) {
+      if (err.code !== "ENOENT") {
+        console.warn("Could not read reports file:", err);
+      }
+    }
+
+    const newId = Math.random().toString(36).substring(2, 9);
+    let assignedClusterId = newId;
+
+    // Clustering logic
+    if (embedding && Array.isArray(embedding)) {
+      let highestSim = -1;
+      let bestMatch: CircleReport | null = null;
+
+      for (const report of existingReports) {
+        if (report.circleId === circleId && report.embedding) {
+          const sim = cosineSimilarity(embedding, report.embedding);
+          if (sim > highestSim) {
+            highestSim = sim;
+            bestMatch = report;
+          }
+        }
+      }
+
+      if (bestMatch && highestSim > 0.75) {
+        assignedClusterId = bestMatch.clusterId;
+      }
+    }
+
+    const newReport: CircleReport = {
+      id: newId,
+      circleId,
+      clusterId: assignedClusterId,
+      text,
+      riskScore,
+      flags: flags || [],
+      explanation,
+      embedding: embedding || null,
+      timestamp: new Date().toISOString(),
+    };
+
+    existingReports.push(newReport);
+    await fs.writeFile(FILE_PATH, JSON.stringify(existingReports, null, 2), "utf8");
+
+    return NextResponse.json({ success: true, report: newReport });
+  } catch (error: any) {
+    console.error("Error saving report:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

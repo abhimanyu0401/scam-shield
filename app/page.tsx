@@ -1,11 +1,25 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface CheckResult {
+  text: string;
   riskScore: number;
   flags: string[];
   explanation: string;
+  embedding?: number[] | null;
+}
+
+interface CircleReport {
+  id: string;
+  circleId: string;
+  clusterId: string;
+  text: string;
+  riskScore: number;
+  flags: string[];
+  explanation: string;
+  timestamp: string;
+  clusterCount: number;
 }
 
 function RiskBadge({ score }: { score: number }) {
@@ -37,7 +51,22 @@ function RiskBadge({ score }: { score: number }) {
   );
 }
 
+function MiniRiskBadge({ score }: { score: number }) {
+  let colorClass = "";
+  if (score < 40) colorClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+  else if (score <= 70) colorClass = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+  else colorClass = "bg-red-500/20 text-red-400 border-red-500/40";
+
+  return (
+    <div className={`flex items-center justify-center w-10 h-10 rounded-full border ${colorClass} text-sm font-bold`}>
+      {score}
+    </div>
+  );
+}
+
 export default function Home() {
+  const [appMode, setAppMode] = useState<"personal" | "radar">("personal");
+  
   const [activeTab, setActiveTab] = useState<"text" | "image">("text");
   const [language, setLanguage] = useState<"en" | "hi">("en");
   
@@ -48,6 +77,16 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Reporting
+  const [reportCircleId, setReportCircleId] = useState<string>("sharma-family");
+  const [reportStatus, setReportStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  // Radar Feed
+  const [selectedCircle, setSelectedCircle] = useState<string>("sharma-family");
+  const [feedReports, setFeedReports] = useState<CircleReport[]>([]);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedError, setFeedError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -73,6 +112,7 @@ export default function Home() {
     setLoading(true);
     setResult(null);
     setError(null);
+    setReportStatus("idle");
 
     try {
       let payload: any = {};
@@ -109,6 +149,56 @@ export default function Home() {
     }
   }
 
+  async function handleReport() {
+    if (!result) return;
+    setReportStatus("loading");
+    try {
+      const res = await fetch(`/api/circles/${reportCircleId}/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: result.text,
+          riskScore: result.riskScore,
+          flags: result.flags,
+          explanation: result.explanation,
+          embedding: result.embedding,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to report");
+      }
+      setReportStatus("success");
+    } catch (e) {
+      console.error(e);
+      setReportStatus("error");
+    }
+  }
+
+  async function fetchFeed() {
+    setFeedLoading(true);
+    setFeedError(null);
+    try {
+      const res = await fetch(`/api/circles/${selectedCircle}/reports`);
+      if (!res.ok) {
+        throw new Error("Failed to fetch feed");
+      }
+      const data = await res.json();
+      setFeedReports(data.reports || []);
+    } catch (e: any) {
+      setFeedError(e.message);
+    } finally {
+      setFeedLoading(false);
+    }
+  }
+
+  // Fetch feed when switching to radar mode or changing circle
+  useEffect(() => {
+    if (appMode === "radar") {
+      fetchFeed();
+    }
+  }, [appMode, selectedCircle]);
+
   return (
     <div className="min-h-screen bg-[#0d0f14] text-slate-100 font-sans">
       {/* Background glow blobs */}
@@ -117,214 +207,345 @@ export default function Home() {
         <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-red-700/15 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative max-w-2xl mx-auto px-4 py-16">
+      <div className="relative max-w-2xl mx-auto px-4 py-8">
         {/* Header */}
-        <header className="text-center mb-12">
+        <header className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-4">
             <span className="text-3xl">🛡️</span>
             <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-red-400 bg-clip-text text-transparent">
               Scam Shield
             </h1>
           </div>
-          <p className="text-slate-400 text-base max-w-md mx-auto leading-relaxed">
-            Paste any suspicious message or upload a screenshot and we&apos;ll analyse it for scam red flags — instantly.
+          <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed mb-6">
+            Instantly analyse suspicious messages, and warn your circle before they fall for the same scam.
           </p>
-        </header>
 
-        {/* Input card */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 shadow-xl mb-6">
-          {/* Tabs */}
-          <div className="flex gap-2 mb-6 border-b border-white/10 pb-4">
+          {/* App Mode Toggle */}
+          <div className="flex justify-center gap-2 border border-white/10 rounded-xl p-1 bg-white/5 inline-flex backdrop-blur-sm">
             <button
-              onClick={() => setActiveTab("text")}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                activeTab === "text"
-                  ? "bg-violet-500/20 text-violet-300"
-                  : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+              onClick={() => setAppMode("personal")}
+              className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
+                appMode === "personal"
+                  ? "bg-violet-500/20 text-violet-300 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
               }`}
             >
-              Paste Text
+              Personal Check
             </button>
             <button
-              onClick={() => setActiveTab("image")}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                activeTab === "image"
-                  ? "bg-violet-500/20 text-violet-300"
-                  : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+              onClick={() => setAppMode("radar")}
+              className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all flex gap-2 items-center ${
+                appMode === "radar"
+                  ? "bg-violet-500/20 text-violet-300 shadow-sm"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
               }`}
             >
-              Upload Screenshot
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
+              </span>
+              Scam Radar
             </button>
           </div>
+        </header>
 
-          {activeTab === "text" ? (
-            <div>
-              <label
-                htmlFor="message-input"
-                className="block text-sm font-semibold text-slate-300 mb-3"
+        {appMode === "personal" ? (
+          <>
+            {/* Input card */}
+            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 shadow-xl mb-6">
+              {/* Tabs */}
+              <div className="flex gap-2 mb-6 border-b border-white/10 pb-4">
+                <button
+                  onClick={() => setActiveTab("text")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    activeTab === "text"
+                      ? "bg-violet-500/20 text-violet-300"
+                      : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                  }`}
+                >
+                  Paste Text
+                </button>
+                <button
+                  onClick={() => setActiveTab("image")}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    activeTab === "image"
+                      ? "bg-violet-500/20 text-violet-300"
+                      : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                  }`}
+                >
+                  Upload Screenshot
+                </button>
+              </div>
+
+              {activeTab === "text" ? (
+                <div>
+                  <label
+                    htmlFor="message-input"
+                    className="block text-sm font-semibold text-slate-300 mb-3"
+                  >
+                    Suspicious message
+                  </label>
+                  <textarea
+                    id="message-input"
+                    rows={6}
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder={`Paste the suspicious message here… e.g. "Your bank account will be blocked. Call 9999-XXXX immediately."`}
+                    className="w-full rounded-xl bg-white/5 border border-white/10 text-slate-100 placeholder-slate-500 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none transition"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-3">
+                    Suspicious screenshot
+                  </label>
+                  <div 
+                    className="w-full border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-violet-500/50 hover:bg-white/5 transition-all"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input 
+                      type="file" 
+                      ref={fileInputRef}
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                    <div className="text-slate-400 text-sm">
+                      {imageFile ? (
+                        <span className="text-violet-300 font-medium">{imageFile.name}</span>
+                      ) : (
+                        <span>Click to browse or drag a screenshot here</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Language toggle */}
+              <div className="mt-6 flex items-center gap-3">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Language</span>
+                <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
+                  <button
+                    id="lang-en"
+                    onClick={() => setLanguage("en")}
+                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                      language === "en"
+                        ? "bg-violet-500/30 text-violet-200"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    EN
+                  </button>
+                  <button
+                    id="lang-hi"
+                    onClick={() => setLanguage("hi")}
+                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                      language === "hi"
+                        ? "bg-violet-500/30 text-violet-200"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    हिं
+                  </button>
+                </div>
+              </div>
+
+              <button
+                id="check-button"
+                onClick={handleCheck}
+                disabled={loading || (activeTab === "text" ? !text.trim() : !imageFile)}
+                className="mt-6 w-full py-3 rounded-xl font-semibold text-sm tracking-wide transition-all
+                  bg-gradient-to-r from-violet-600 to-red-500 hover:from-violet-500 hover:to-red-400
+                  disabled:opacity-40 disabled:cursor-not-allowed
+                  shadow-lg hover:shadow-violet-500/30 active:scale-[0.98]"
               >
-                Suspicious message
-              </label>
-              <textarea
-                id="message-input"
-                rows={6}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={`Paste the suspicious message here… e.g. "Your bank account will be blocked. Call 9999-XXXX immediately and share your OTP to verify."`}
-                className="w-full rounded-xl bg-white/5 border border-white/10 text-slate-100 placeholder-slate-500 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none transition"
-              />
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Analysing…
+                  </span>
+                ) : (
+                  "Check for Scam"
+                )}
+              </button>
             </div>
-          ) : (
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-3">
-                Suspicious screenshot
-              </label>
-              <div 
-                className="w-full border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-violet-500/50 hover:bg-white/5 transition-all"
-                onClick={() => fileInputRef.current?.click()}
+
+            {/* Image Preview */}
+            {activeTab === "image" && imagePreview && result && (
+              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 shadow-xl mb-6 flex justify-center animate-fade-in">
+                <img src={imagePreview} alt="Screenshot preview" className="max-h-48 rounded-lg border border-white/20 object-contain" />
+              </div>
+            )}
+
+            {/* Error state */}
+            {error && (
+              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-400 mb-6 animate-fade-in">
+                ⚠️ {error}
+              </div>
+            )}
+
+            {/* Results card */}
+            {result && (
+              <div
+                id="results-card"
+                className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 shadow-xl space-y-6 animate-fade-in"
               >
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-                <div className="text-slate-400 text-sm">
-                  {imageFile ? (
-                    <span className="text-violet-300 font-medium">{imageFile.name}</span>
-                  ) : (
-                    <span>Click to browse or drag a screenshot here</span>
+                <h2 className="text-lg font-bold text-slate-100">Analysis Result</h2>
+
+                {/* Risk score */}
+                <div className="flex justify-center">
+                  <RiskBadge score={result.riskScore} />
+                </div>
+
+                {/* Flags */}
+                {result.flags.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                      Red Flags Detected
+                    </h3>
+                    <ul className="flex flex-wrap gap-2">
+                      {result.flags.map((flag) => (
+                        <li
+                          key={flag}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/30"
+                        >
+                          🚩 {flag}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Explanation */}
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                    Explanation
+                  </h3>
+                  <p className="text-slate-300 text-sm leading-relaxed bg-white/5 rounded-xl px-4 py-3 border border-white/10">
+                    {result.explanation}
+                  </p>
+                </div>
+
+                <hr className="border-white/10" />
+
+                {/* Report to Circle section */}
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-100 mb-2">
+                    Warn Your Circle
+                  </h3>
+                  <p className="text-xs text-slate-400 mb-3">
+                    If this is a scam, share it with your community to protect others from falling for it.
+                  </p>
+                  <div className="flex gap-2 items-center">
+                    <select
+                      value={reportCircleId}
+                      onChange={(e) => setReportCircleId(e.target.value)}
+                      className="flex-1 rounded-xl bg-white/5 border border-white/10 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    >
+                      <option value="sharma-family" className="bg-slate-900">Sharma Family Group</option>
+                      <option value="green-valley-rwa" className="bg-slate-900">Green Valley RWA</option>
+                    </select>
+                    <button
+                      onClick={handleReport}
+                      disabled={reportStatus === "loading" || reportStatus === "success"}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {reportStatus === "loading" ? "Reporting..." : reportStatus === "success" ? "✓ Reported" : "Report"}
+                    </button>
+                  </div>
+                  {reportStatus === "success" && (
+                    <p className="text-xs text-emerald-400 mt-2">
+                      Successfully reported! View it in the Scam Radar tab.
+                    </p>
+                  )}
+                  {reportStatus === "error" && (
+                    <p className="text-xs text-red-400 mt-2">
+                      Failed to report. Please try again.
+                    </p>
                   )}
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Language toggle */}
-          <div className="mt-6 flex items-center gap-3">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Language</span>
-            <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
-              <button
-                id="lang-en"
-                onClick={() => setLanguage("en")}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
-                  language === "en"
-                    ? "bg-violet-500/30 text-violet-200"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                EN
-              </button>
-              <button
-                id="lang-hi"
-                onClick={() => setLanguage("hi")}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
-                  language === "hi"
-                    ? "bg-violet-500/30 text-violet-200"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                हिं
-              </button>
-            </div>
-          </div>
-
-          <button
-            id="check-button"
-            onClick={handleCheck}
-            disabled={loading || (activeTab === "text" ? !text.trim() : !imageFile)}
-            className="mt-6 w-full py-3 rounded-xl font-semibold text-sm tracking-wide transition-all
-              bg-gradient-to-r from-violet-600 to-red-500 hover:from-violet-500 hover:to-red-400
-              disabled:opacity-40 disabled:cursor-not-allowed
-              shadow-lg hover:shadow-violet-500/30 active:scale-[0.98]"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg
-                  className="animate-spin h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v8z"
-                  />
-                </svg>
-                Analysing…
-              </span>
-            ) : (
-              "Check for Scam"
             )}
-          </button>
-        </div>
-
-        {/* Image Preview (shown before/with results) */}
-        {activeTab === "image" && imagePreview && result && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 shadow-xl mb-6 flex justify-center animate-fade-in">
-            <img src={imagePreview} alt="Screenshot preview" className="max-h-48 rounded-lg border border-white/20 object-contain" />
-          </div>
-        )}
-
-        {/* Error state */}
-        {error && (
-          <div
-            id="error-banner"
-            className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-400 mb-6 animate-fade-in"
-          >
-            ⚠️ {error}
-          </div>
-        )}
-
-        {/* Results card */}
-        {result && (
-          <div
-            id="results-card"
-            className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 shadow-xl space-y-6 animate-fade-in"
-          >
-            <h2 className="text-lg font-bold text-slate-100">Analysis Result</h2>
-
-            {/* Risk score */}
-            <div className="flex justify-center">
-              <RiskBadge score={result.riskScore} />
+          </>
+        ) : (
+          /* RADAR VIEW */
+          <div className="animate-fade-in">
+            <div className="flex items-center justify-between mb-6">
+              <select
+                value={selectedCircle}
+                onChange={(e) => setSelectedCircle(e.target.value)}
+                className="rounded-xl bg-white/5 border border-white/10 text-slate-100 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 shadow-xl"
+              >
+                <option value="sharma-family" className="bg-slate-900">Sharma Family Group</option>
+                <option value="green-valley-rwa" className="bg-slate-900">Green Valley RWA</option>
+              </select>
+              
+              <button
+                onClick={fetchFeed}
+                disabled={feedLoading}
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-50 transition-colors"
+              >
+                {feedLoading ? "Refreshing..." : "↻ Refresh Feed"}
+              </button>
             </div>
 
-            {/* Flags */}
-            {result.flags.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                  Red Flags Detected
-                </h3>
-                <ul className="flex flex-wrap gap-2">
-                  {result.flags.map((flag) => (
-                    <li
-                      key={flag}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/30"
-                    >
-                      🚩 {flag}
-                    </li>
-                  ))}
-                </ul>
+            {feedError && (
+              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm text-red-400 mb-6">
+                ⚠️ {feedError}
               </div>
             )}
 
-            {/* Explanation */}
-            <div>
-              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Explanation
-              </h3>
-              <p className="text-slate-300 text-sm leading-relaxed bg-white/5 rounded-xl px-4 py-3 border border-white/10">
-                {result.explanation}
-              </p>
+            <div className="space-y-4">
+              {feedReports.length === 0 && !feedLoading ? (
+                <div className="text-center py-12 border border-dashed border-white/10 rounded-2xl">
+                  <p className="text-slate-400 text-sm">No reports in this circle yet.</p>
+                </div>
+              ) : (
+                feedReports.map((report) => (
+                  <div key={report.id} className="rounded-2xl border border-white/10 bg-white/5 p-4 flex gap-4 backdrop-blur-sm shadow-xl">
+                    <div className="flex-shrink-0">
+                      <MiniRiskBadge score={report.riskScore} />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <p className="text-xs text-slate-400">
+                        Reported {new Date(report.timestamp).toLocaleString()}
+                      </p>
+                      
+                      {report.clusterCount > 1 && (
+                        <div className="inline-flex items-center gap-1.5 bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase">
+                          <span>⚠️</span>
+                          {report.clusterCount} people in this circle reported similar messages
+                        </div>
+                      )}
+                      
+                      <p className="text-sm text-slate-200 line-clamp-3 italic opacity-80 border-l-2 border-white/20 pl-2">
+                        "{report.text}"
+                      </p>
+
+                      <div className="bg-black/20 rounded-lg p-3 text-sm text-slate-300">
+                        {report.explanation}
+                      </div>
+
+                      {report.flags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {report.flags.map((flag, idx) => (
+                            <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10">
+                              {flag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
