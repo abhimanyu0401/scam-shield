@@ -8,6 +8,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
+    // --- Language selection (defaults to English) ---
+    const language: "en" | "hi" = body.language === "hi" ? "hi" : "en";
+    const languageLabel = language === "hi" ? "Hindi" : "English";
+
     let textToAnalyze = "";
 
     if (body.imageBase64 && body.mimeType) {
@@ -94,6 +98,8 @@ Return a JSON object with EXACTLY the following structure:
   "flags": array of strings (specific red flags found, e.g., "Requests sensitive info"),
   "explanation": string (plain-language explanation of why it looks risky or safe)
 }
+
+IMPORTANT: Write the "explanation" field in ${languageLabel}. Keep all "flags" array values in English.
 
 Message to analyze:
 """

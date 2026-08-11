@@ -127,7 +127,7 @@ Since you're building alone, this is organized as sequential **phases**, not fix
 | 1 | Project skeleton with fake data | Paste text → click button → see a hardcoded fake result end-to-end |
 | 2 | Real AI analysis | Real Gemini call replaces the fake response; tested with 3 different messages |
 | 3 | Screenshot upload | Upload a screenshot → same result pipeline works |
-| 4 | Multilingual toggle | English/Hindi switch changes the explanation language |
+| 4 | Multilingual toggle | ✅ English/Hindi switch changes the explanation language — tested with both |
 | 5 | Lightweight pattern matching | Known scam examples correctly get flagged as "matches known pattern" |
 | 6 | Scam Radar | Submit to a circle → feed updates → similar reports cluster |
 | 7 | UI polish | Clean layout, color-coded score, mobile-responsive |

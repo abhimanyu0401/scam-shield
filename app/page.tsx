@@ -39,6 +39,7 @@ function RiskBadge({ score }: { score: number }) {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"text" | "image">("text");
+  const [language, setLanguage] = useState<"en" | "hi">("en");
   
   const [text, setText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -77,13 +78,14 @@ export default function Home() {
       let payload: any = {};
       
       if (activeTab === "text") {
-        payload = { text };
+        payload = { text, language };
       } else if (activeTab === "image" && imageFile && imagePreview) {
         // Strip data:image/...;base64,
         const base64Data = imagePreview.split(",")[1];
         payload = {
           imageBase64: base64Data,
           mimeType: imageFile.type,
+          language,
         };
       }
 
@@ -198,6 +200,35 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {/* Language toggle */}
+          <div className="mt-6 flex items-center gap-3">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Language</span>
+            <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
+              <button
+                id="lang-en"
+                onClick={() => setLanguage("en")}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                  language === "en"
+                    ? "bg-violet-500/30 text-violet-200"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                EN
+              </button>
+              <button
+                id="lang-hi"
+                onClick={() => setLanguage("hi")}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                  language === "hi"
+                    ? "bg-violet-500/30 text-violet-200"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                हिं
+              </button>
+            </div>
+          </div>
 
           <button
             id="check-button"
