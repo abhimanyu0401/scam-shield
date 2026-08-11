@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
             },
           },
           {
-            text: "Extract and return all the text visible in this image. If there is no text at all, output EXACTLY the word: NO_TEXT_FOUND. Do not add any extra commentary.",
+            text: "Extract and return all the text visible in this image. If there is no text at all, output EXACTLY the word: NO_TEXT_FOUND. Do not add any extra commentary. If this image is not a screenshot of a text message, chat, or email — for example if it's a photo of a person, an object, or unrelated text like clothing or signage — respond with exactly NOT_A_MESSAGE instead of extracting the text.",
           },
         ],
       });
@@ -31,6 +31,12 @@ export async function POST(req: NextRequest) {
 
       // Validate extracted text
       const cleanText = textToAnalyze.trim();
+      if (cleanText.includes("NOT_A_MESSAGE")) {
+        return NextResponse.json(
+          { error: "This doesn't look like a message screenshot. Try uploading a screenshot of a text, chat, or email." },
+          { status: 400 }
+        );
+      }
       if (!cleanText || cleanText.includes("NO_TEXT_FOUND") || cleanText.length < 3) {
         return NextResponse.json(
           { error: "No readable text was found in this image. Try a clearer screenshot." },

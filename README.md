@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Scam Shield 🛡️
+
+An AI-powered tool that instantly checks suspicious messages, screenshots, and (soon) calls for scam red flags — giving a risk score, plain-language explanation, and safe next steps.
+
+Built for **Bharat Pragati PS1 — AI Deepfake & Scam Detection**.
+
+Full project spec, architecture, and feature roadmap: see [`roadmap.md`](./roadmap.md).
+
+## Current Status
+- ✅ Text-paste scam analysis (rule-based checks + Gemini reasoning)
+- ✅ Screenshot upload with OCR extraction
+- 🚧 Multilingual toggle — in progress
+- 🚧 Pattern matching, Scam Radar — coming next
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- [Node.js](https://nodejs.org/) v18 or later
+- A free Gemini API key (see below)
 
+### 1. Clone the repo
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/<your-username>/scam-shield.git
+cd scam-shield
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install dependencies
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Set up your API key
+This project needs a Gemini API key to run. **Each person needs their own key** — it's never committed to git.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Copy the example env file:
+```bash
+   cp .env.example .env.local
+```
+   (Windows: `copy .env.example .env.local`)
+2. Get a free key at [aistudio.google.com](https://aistudio.google.com) → "Get API key" → "Create API key."
+3. Open `.env.local` and paste your key in:
+```
+   GEMINI_API_KEY=your_key_here
+```
 
-## Learn More
+### 4. Run it
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+## Testing what's built so far
+- Paste a suspicious message and click "Check for Scam"
+- Try the "Upload Screenshot" tab with a message screenshot
+- Try an obvious scam, a safe message, and an ambiguous one to compare scoring
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tech Stack
+Next.js (App Router), React, TypeScript, Tailwind CSS, Gemini API (`@google/genai`)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Note on rate limits
+We're currently on Gemini's free tier, which has a low daily request limit (about 20 requests/day per key). If you hit a rate-limit error while testing, that's expected — just wait a bit or ping the team before assuming something's broken.
