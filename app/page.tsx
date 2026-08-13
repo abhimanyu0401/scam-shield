@@ -520,7 +520,7 @@ export default function Home() {
                       <p className="text-xs text-slate-400 leading-relaxed">
                         <strong className="text-slate-300">Chakshu</strong> is the Government of India's portal (under DoT's Sanchar Saathi) for reporting <em>suspected</em> telecom fraud — designed exactly for cases like this where no financial loss has occurred yet.{" "}
                         <a
-                          href="https://sancharsaathi.gov.in/sfc/Home/sfc-complaint-do.jsp"
+                          href="https://sancharsaathi.gov.in/Home/ss-feedback.jsp"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-violet-400 hover:text-violet-300 underline"
