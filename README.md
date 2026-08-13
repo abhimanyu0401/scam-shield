@@ -84,7 +84,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Chakshu draft | Use a clear scam message — draft appears at risk ≥ 75 |
 | Copy Draft / Copy Alert | Click the copy buttons, paste into any text editor |
 | Safe Browsing | Include a known phishing URL in the pasted text |
-| Scam Radar | Switch to **Scam Radar**, report a high-risk result, refresh the feed |
+| Scam Radar | Switch to **Scam Radar**, report a high-risk result, refresh  feed |
 
 ---
 
