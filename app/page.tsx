@@ -8,6 +8,8 @@ interface CheckResult {
   flags: string[];
   explanation: string;
   embedding?: number[] | null;
+  complaintDraft?: string;
+  financialLossLikely?: boolean;
 }
 
 interface CircleReport {
@@ -87,6 +89,10 @@ export default function Home() {
   const [feedReports, setFeedReports] = useState<CircleReport[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedError, setFeedError] = useState<string | null>(null);
+
+  // Copy button states
+  const [shareAlertCopied, setShareAlertCopied] = useState(false);
+  const [draftCopied, setDraftCopied] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -400,8 +406,46 @@ export default function Home() {
                 <h2 className="text-lg font-bold text-slate-100">Analysis Result</h2>
 
                 {/* Risk score */}
-                <div className="flex justify-center">
+                <div className="flex flex-col items-center gap-3">
                   <RiskBadge score={result.riskScore} />
+                  {/* Copy Alert to Share button */}
+                  <button
+                    id="copy-alert-button"
+                    onClick={async () => {
+                      const verdictLabel = result.riskScore < 40 ? "Low Risk" : result.riskScore <= 70 ? "Medium Risk" : "High Risk";
+                      const flagLines = result.flags.length > 0
+                        ? result.flags.map(f => `• ${f}`).join("\n")
+                        : "• None detected";
+                      const preview = result.text.length > 200
+                        ? result.text.slice(0, 200) + "…"
+                        : result.text;
+                      const shareText = [
+                        `🚨 SCAM ALERT — Scam Shield Analysis`,
+                        ``,
+                        `Risk Score: ${result.riskScore}/100 (${verdictLabel})`,
+                        ``,
+                        `Key Red Flags:`,
+                        flagLines,
+                        ``,
+                        `What this means: ${result.explanation}`,
+                        ``,
+                        `Analysed message:`,
+                        `"${preview}"`,
+                        ``,
+                        `— Checked with Scam Shield (scamshield.vercel.app)`,
+                      ].join("\n");
+                      try {
+                        await navigator.clipboard.writeText(shareText);
+                        setShareAlertCopied(true);
+                        setTimeout(() => setShareAlertCopied(false), 2000);
+                      } catch {
+                        // fallback: select a hidden textarea — browser may block clipboard without gesture
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-white/15 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-slate-100 transition-all active:scale-95"
+                  >
+                    {shareAlertCopied ? "✓ Copied!" : "📤 Copy Alert to Share"}
+                  </button>
                 </div>
 
                 {/* Flags */}
@@ -432,6 +476,66 @@ export default function Home() {
                     {result.explanation}
                   </p>
                 </div>
+
+                {/* Chakshu complaint draft — shown when riskScore >= 75 and draft is non-empty */}
+                {result.riskScore >= 75 && result.complaintDraft && result.complaintDraft.trim() !== "" && (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-bold text-amber-300 flex items-center gap-2">
+                        📋 Chakshu Complaint Draft
+                      </h3>
+                      <button
+                        id="copy-draft-button"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(result.complaintDraft!);
+                            setDraftCopied(true);
+                            setTimeout(() => setDraftCopied(false), 2000);
+                          } catch {
+                            // clipboard blocked
+                          }
+                        }}
+                        className="flex-shrink-0 px-3 py-1 rounded-lg text-xs font-semibold border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-all active:scale-95"
+                      >
+                        {draftCopied ? "✓ Copied!" : "Copy Draft"}
+                      </button>
+                    </div>
+
+                    {/* Channel routing note */}
+                    {result.financialLossLikely ? (
+                      <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-xs text-red-300 leading-relaxed">
+                        ⚠️ <strong>This message suggests money may have already been sent or lost.</strong> The right channel is the{" "}
+                        <strong>Cyber Crime Helpline: 1930</strong> or{" "}
+                        <a
+                          href="https://cybercrime.gov.in"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-red-200"
+                        >
+                          cybercrime.gov.in
+                        </a>
+                        {" "}— not Chakshu. File the draft below as supporting documentation.
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        <strong className="text-slate-300">Chakshu</strong> is the Government of India's portal (under DoT's Sanchar Saathi) for reporting <em>suspected</em> telecom fraud — designed exactly for cases like this where no financial loss has occurred yet.{" "}
+                        <a
+                          href="https://sancharsaathi.gov.in/sfc/Home/sfc-complaint-do.jsp"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-violet-400 hover:text-violet-300 underline"
+                        >
+                          File at Sanchar Saathi →
+                        </a>
+                      </p>
+                    )}
+
+                    {/* The draft text itself */}
+                    <pre className="whitespace-pre-wrap font-mono text-xs text-slate-300 bg-black/30 rounded-lg px-3 py-3 border border-white/10 leading-relaxed">
+                      {result.complaintDraft}
+                    </pre>
+                  </div>
+                )}
 
                 <hr className="border-white/10" />
 

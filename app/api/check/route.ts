@@ -192,10 +192,22 @@ Return a JSON object with EXACTLY the following structure:
 {
   "riskScore": number (0 to 100, where 100 is definite scam and 0 is completely safe),
   "flags": array of strings (specific red flags found, e.g., "Requests sensitive info"),
-  "explanation": string (plain-language explanation of why it looks risky or safe)
+  "explanation": string (plain-language explanation of why it looks risky or safe),
+  "financialLossLikely": boolean (true ONLY if the message text strongly suggests the recipient has ALREADY sent money, made a payment, or suffered a financial loss — e.g. "I already transferred", "money was deducted". False for suspected/attempted scams where no loss has occurred yet.),
+  "complaintDraft": string (if riskScore >= 75, produce a filled-in fraud complaint draft in this format:
+"Suspected Scam Type: [type, e.g. Bank KYC Fraud / OTP Scam / Lottery Fraud / Investment Scam / etc.]
+
+Description: [2-3 sentence plain description of what the fraudulent message claimed and what it asked the recipient to do]
+
+Entities Involved:
+[List ONLY entities that actually appear in the message text — phone numbers, WhatsApp numbers, URLs/links, UPI IDs, email addresses, amounts of money mentioned. If none are present in the text, write: None identified in this message.]
+
+Recommended Action: [one sentence on what the recipient should do next]"
+
+If riskScore is below 75, return an empty string for this field. Extract entities only from what is literally present in the message — do not invent or guess.)
 }
 
-IMPORTANT: Write the "explanation" field in ${languageLabel}. Keep all "flags" array values in English.
+IMPORTANT: Write the "explanation" field in ${languageLabel}. Keep all "flags" array values in English. Write "complaintDraft" in English regardless of language setting.
 
 Message to analyze:
 """
@@ -215,8 +227,10 @@ ${text}
                 riskScore: { type: Type.INTEGER },
                 flags: { type: Type.ARRAY, items: { type: Type.STRING } },
                 explanation: { type: Type.STRING },
+                financialLossLikely: { type: Type.BOOLEAN },
+                complaintDraft: { type: Type.STRING },
               },
-              required: ["riskScore", "flags", "explanation"],
+              required: ["riskScore", "flags", "explanation", "financialLossLikely", "complaintDraft"],
             },
           },
         });
@@ -227,7 +241,7 @@ ${text}
       } catch (e) {
         console.error("Gemini analysis failed:", e);
         return {
-          explanation: "DEBUG ERROR: Failed to parse AI response. Check server logs."
+          explanation: "Something went wrong analysing this — please try again."
         };
       }
     })();
@@ -256,6 +270,8 @@ ${text}
       flags: finalFlags,
       explanation: aiResult.explanation || "No explanation provided.",
       embedding: patternMatchResult ? patternMatchResult.queryEmbedding : null,
+      complaintDraft: typeof aiResult.complaintDraft === 'string' ? aiResult.complaintDraft : "",
+      financialLossLikely: aiResult.financialLossLikely === true,
     };
 
     return NextResponse.json(finalResponse);
