@@ -112,47 +112,82 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (/https?:\/\/|www\./i.test(text)) {
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+    const foundUrls = text.match(urlRegex) || [];
+    if (foundUrls.length > 0) {
       ruleFlags.add("Contains link/URL");
     }
 
-    // --- 1.5 Pattern Matching (Embeddings) ---
-    let queryEmbedding: number[] | null = null;
+    // --- 2. Prepare Concurrent Promises ---
+    
+    // Promise 1: Safe Browsing API (Fails safely, never rejects)
+    const safeBrowsingPromise = (async () => {
+      if (foundUrls.length === 0 || !process.env.SAFE_BROWSING_API_KEY) return null;
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        const response = await fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${process.env.SAFE_BROWSING_API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client: { clientId: "scam-shield", clientVersion: "1.0.0" },
+            threatInfo: {
+              threatTypes: ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE"],
+              platformTypes: ["ANY_PLATFORM"],
+              threatEntryTypes: ["URL"],
+              threatEntries: foundUrls.map(url => ({ url }))
+            }
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) return null; // resolve silently on error
+        const data = await response.json();
+        return data.matches && data.matches.length > 0 ? true : false;
+      } catch (err) {
+        return null; // always resolve on any failure (timeout, network error, etc.)
+      }
+    })();
 
-    if (scamPatterns.length > 0 && text.length > 10) {
+    // Promise 2: Pattern Matching (Embeddings)
+    const patternMatchPromise = (async () => {
+      if (scamPatterns.length === 0 || text.length <= 10) return null;
       try {
         const embedRes = await ai.models.embedContent({
           model: "gemini-embedding-001",
           contents: text,
-          config: {
-            taskType: "RETRIEVAL_QUERY",
-          },
+          config: { taskType: "RETRIEVAL_QUERY" },
         });
         
-        queryEmbedding = embedRes.embeddings?.[0]?.values || null;
-        if (queryEmbedding) {
-          let bestMatch = null;
-          let highestSim = -1;
-          
-          for (const pattern of scamPatterns) {
-            const sim = cosineSimilarity(queryEmbedding, pattern.embedding);
-            if (sim > highestSim) {
-              highestSim = sim;
-              bestMatch = pattern;
-            }
-          }
-          
-          if (bestMatch && highestSim > 0.7) {
-            ruleFlags.add(`Matches known pattern: ${bestMatch.name}`);
+        const queryEmbedding = embedRes.embeddings?.[0]?.values || null;
+        if (!queryEmbedding) return null;
+        
+        let bestMatch = null;
+        let highestSim = -1;
+        
+        for (const pattern of scamPatterns) {
+          const sim = cosineSimilarity(queryEmbedding, pattern.embedding);
+          if (sim > highestSim) {
+            highestSim = sim;
+            bestMatch = pattern;
           }
         }
+        
+        if (bestMatch && highestSim > 0.7) {
+          return { matchName: bestMatch.name, queryEmbedding };
+        }
+        return { matchName: null, queryEmbedding };
       } catch (err) {
         console.warn("Pattern matching failed:", err);
+        return null;
       }
-    }
+    })();
 
-    // --- 2. Gemini AI Call ---
-    const prompt = `Analyze the following message for scam patterns.
+    // Promise 3: Gemini AI Call
+    const geminiPromise = (async () => {
+      const prompt = `Analyze the following message for scam patterns.
 Return a JSON object with EXACTLY the following structure:
 {
   "riskScore": number (0 to 100, where 100 is definite scam and 0 is completely safe),
@@ -168,38 +203,51 @@ ${text}
 """
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            riskScore: { type: Type.INTEGER },
-            flags: { type: Type.ARRAY, items: { type: Type.STRING } },
-            explanation: { type: Type.STRING },
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                riskScore: { type: Type.INTEGER },
+                flags: { type: Type.ARRAY, items: { type: Type.STRING } },
+                explanation: { type: Type.STRING },
+              },
+              required: ["riskScore", "flags", "explanation"],
+            },
           },
-          required: ["riskScore", "flags", "explanation"],
-        },
-      },
-    });
+        });
+        
+        const rawText = response.text || "{}";
+        const cleanedJsonText = rawText.replace(/^```json\s*/, "").replace(/```$/, "").trim();
+        return JSON.parse(cleanedJsonText);
+      } catch (e) {
+        console.error("Gemini analysis failed:", e);
+        return {
+          explanation: "DEBUG ERROR: Failed to parse AI response. Check server logs."
+        };
+      }
+    })();
 
-    const rawText = response.text || "{}";
-    const cleanedJsonText = rawText.replace(/^```json\s*/, "").replace(/```$/, "").trim();
-    
-    let aiResult: any = {};
-    try {
-      aiResult = JSON.parse(cleanedJsonText);
-    } catch (e) {
-      console.error("Failed to parse Gemini output:", cleanedJsonText);
-      aiResult = {
-        explanation: "DEBUG ERROR: Failed to parse AI response. Check server logs."
-      };
+    // --- 3. Execute Concurrently and Merge Results ---
+    const [isMaliciousLink, patternMatchResult, aiResult] = await Promise.all([
+      safeBrowsingPromise,
+      patternMatchPromise,
+      geminiPromise
+    ]);
+
+    if (isMaliciousLink) {
+      ruleFlags.add("⚠️ Known malicious link");
     }
-    const aiFlags = Array.isArray(aiResult.flags) ? aiResult.flags : [];
     
-    // --- 3. Merge flags ---
+    if (patternMatchResult && patternMatchResult.matchName) {
+      ruleFlags.add(`Matches known pattern: ${patternMatchResult.matchName}`);
+    }
+
+    const aiFlags = Array.isArray(aiResult.flags) ? aiResult.flags : [];
     const finalFlags = Array.from(new Set([...ruleFlags, ...aiFlags]));
 
     const finalResponse = {
@@ -207,7 +255,7 @@ ${text}
       riskScore: typeof aiResult.riskScore === 'number' ? aiResult.riskScore : (ruleFlags.size > 0 ? 50 : 0),
       flags: finalFlags,
       explanation: aiResult.explanation || "No explanation provided.",
-      embedding: queryEmbedding,
+      embedding: patternMatchResult ? patternMatchResult.queryEmbedding : null,
     };
 
     return NextResponse.json(finalResponse);

@@ -38,5 +38,105 @@
     "id": "family-emergency",
     "name": "Family Emergency / AI Voice",
     "text": "Hello, I am a police officer calling from the local station. Your son/daughter has been detained in an accident case. We can settle this without an FIR if you transfer Rs 25,000 immediately to this UPI number. Don't tell anyone or they will be jailed."
+  },
+  {
+    "id": "fake-post-delivery",
+    "name": "Fake India Post Delivery",
+    "text": "India Post: Your package could not be delivered due to an incorrect address. Please update your delivery details and pay a redelivery fee of Rs 25 here: [link]"
+  },
+  {
+    "id": "echallan-scam",
+    "name": "E-Challan Scam",
+    "text": "Parivahan Sewa: You have a pending traffic challan of Rs 1000 for speeding. Pay within 24 hours to avoid vehicle impoundment. Click here: [link]"
+  },
+  {
+    "id": "income-tax-refund",
+    "name": "Income Tax Refund",
+    "text": "Dear Taxpayer, an income tax refund of Rs 15,400 has been approved. To claim your refund, verify your bank account details at [link]."
+  },
+  {
+    "id": "whatsapp-verification",
+    "name": "WhatsApp Verification Code",
+    "text": "Hello, I accidentally sent a 6-digit WhatsApp verification code to your number. Can you please send it back to me? It's an emergency."
+  },
+  {
+    "id": "fake-customer-care",
+    "name": "Fake Customer Care (Screen Share)",
+    "text": "Dear Jio/Airtel user, your 5G service has encountered an error. Please download the AnyDesk app and share the 9-digit code with our executive to fix the network issue."
+  },
+  {
+    "id": "whatsapp-trading-group",
+    "name": "WhatsApp Trading Group",
+    "text": "Join our VIP Stock Trading Group! Our experts guarantee 300% monthly returns. Invest a minimum of Rs 10,000 in our proprietary app to get started. Upper circuit stocks daily!"
+  },
+  {
+    "id": "crypto-high-returns",
+    "name": "Crypto High Returns",
+    "text": "Congratulations! You have been selected for the Binance Cloud Mining project. Deposit 50 USDT to activate your wallet and earn 10 USDT daily. Register here: [link]"
+  },
+  {
+    "id": "insurance-bonus",
+    "name": "Insurance Bonus Scam",
+    "text": "LIC Alert: Your policy has accrued a loyalty bonus of Rs 1,25,000. It will lapse today. Pay a processing fee of Rs 4,500 to release the funds directly to your bank."
+  },
+  {
+    "id": "pf-withdrawal",
+    "name": "PF Withdrawal Scam",
+    "text": "EPFO: Your PF withdrawal request for Rs 2,50,000 is on hold due to missing KYC. Click the link to update your Aadhaar and approve the transfer: [link]"
+  },
+  {
+    "id": "jeevan-pramaan",
+    "name": "Pension (Jeevan Pramaan) Update",
+    "text": "Pension Directorate: Your monthly pension will be stopped from next month. Generate your digital life certificate immediately via this link: [link]"
+  },
+  {
+    "id": "romance-customs",
+    "name": "Customs Gift Scam (Romance)",
+    "text": "My dear, I have sent you an iPhone, a gold watch, and 50,000 pounds as a gift from the UK. The parcel is stuck at Delhi airport. The customs officer will call you to pay a clearance fee of Rs 35,000."
+  },
+  {
+    "id": "video-call-extortion",
+    "name": "Fake Video Call Extortion",
+    "text": "You have 10 minutes to pay Rs 50,000, or I will upload the recorded video call to YouTube and send it to your entire Facebook friends list and family members."
+  },
+  {
+    "id": "army-officer-rental",
+    "name": "Army Officer Rental Scam",
+    "text": "I am an Indian Army officer transferred to your city. I want to rent your flat. I will send a 2-month advance deposit right now. Please scan this QR code or enter your UPI PIN to 'receive' the payment."
+  },
+  {
+    "id": "fake-pg-booking",
+    "name": "Fake PG Booking",
+    "text": "Book the best PG/Hostel in Koramangala. Only Rs 5,000/month with food. Only 2 beds left. Pay a token amount of Rs 2,000 immediately via GPay to block your bed."
+  },
+  {
+    "id": "board-exam-marks",
+    "name": "Board Exam Marks Scam",
+    "text": "CBSE/State Board: Your son/daughter is failing in 2 subjects by 5 marks. If you pay Rs 10,000 today, we will increase the marks in the system before the results are published."
+  },
+  {
+    "id": "govt-job-fake-interview",
+    "name": "Govt Job Fake Interview",
+    "text": "Congratulations! You are selected for the clerk position in Ministry of Railways. Download your interview call letter by paying a refundable security deposit of Rs 1,500 here: [link]"
+  },
+  {
+    "id": "kbc-lottery",
+    "name": "KBC Lottery Scam",
+    "text": "Congratulations! Your WhatsApp number has won the KBC lottery of Rs 25 Lakhs. Contact our bank manager on this WhatsApp number to claim your prize."
+  },
+  {
+    "id": "sim-swap-fraud",
+    "name": "SIM Swap Fraud",
+    "text": "Jio/Airtel Customer Service: We have received your request for a 5G SIM upgrade and porting to a new physical SIM card. If you did not initiate this request, press 1 or reply 'CANCEL' immediately to stop the deactivation of your current SIM."
+  },
+  {
+    "id": "gas-cylinder-scam",
+    "name": "Gas Cylinder Scam",
+    "text": "Indane/BharatGas: Your LPG subsidy for the year has been cancelled. Click here to verify your identity and restore your Rs 300 subsidy immediately: [link]"
+  },
+  {
+    "id": "cc-reward-points",
+    "name": "Credit Card Reward Points",
+    "text": "HDFC Bank: Your 15,000 reward points will expire today. Click the link, enter your card details and CVV to redeem them for Rs 15,000 cash in your account."
   }
 ]

@@ -1,165 +1,186 @@
-# Scam Shield — Project Roadmap (Final, Solo-Build Version)
+# Scam Shield — Project Roadmap (v2 — Post-Deadline Extension, Finalized)
 **Problem Statement:** Bharat Pragati PS1 — AI Deepfake & Scam Detection
-**Build mode:** Solo, using Google Antigravity
+**Status:** Phases 1-6 complete and deployed live. This document is the finalized spec for the v2 expansion.
 
 ---
 
 ## 1. Elevator Pitch
 
-Scam Shield is an AI tool that instantly checks any suspicious message, screenshot, or call description for scam red flags — and the moment one person in a family or community group flags something, it warns everyone else in that circle before they get the same call.
+Scam Shield is an AI tool that instantly checks any suspicious message, screenshot, or voice note/call recording for scam red flags — giving a risk score, plain-language explanation, and safe next steps in the user's own language, including an auto-generated Chakshu-style complaint draft. Its "Scam Radar" layer lets real, invite-only trust circles (family, RWA, SHG) warn each other the moment one member reports a scam pattern — with real accounts and named confirmations, not simulated demo circles.
 
 ---
 
-## 2. The Problem
+## 2. What's Already Built (Phases 1-6, Deployed)
 
-- Scam calls (fake "digital arrest," fake UPI refunds, fake bill-disconnect threats) spread through social networks fast — by the time one person figures out it's a scam, the same script may already be hitting dozens of others nearby.
-- Elderly people are the most common targets and the least likely to check an official app or website — they trust a warning from family far more than a notification from an unknown app.
-- Bank/telecom fraud dashboards exist, but they work at "institutional speed" — slow, centralized, after the fact. Scams spread at "social speed" — a WhatsApp forward within the hour.
-
----
-
-## 3. Our Core Idea (Two Layers)
-
-1. **Personal Scam Checker** — paste text, upload a screenshot, or describe a call → get an instant risk score, explanation, and advice, in your own language.
-2. **Scam Radar (Community Layer)** — reports inside a "trust circle" (family group, RWA, self-help group) get clustered together, and everyone in that circle is warned about the pattern before they encounter it themselves.
+- Text-paste and screenshot scam analysis (rule-based checks + Gemini reasoning + Gemini vision OCR)
+- Multilingual explanations (English/Hindi)
+- Lightweight embedding-based pattern matching against 8 curated Indian scam scripts (cosine similarity, `gemini-embedding-001`)
+- Scam Radar: two hardcoded demo circles, clustering by similarity, Redis-backed (Upstash) storage
+- Live on Vercel, tested end-to-end
+- Currently on Gemini's free API tier (billing not yet enabled — using key rotation across accounts)
 
 ---
 
-## 4. Who Uses It
+## 3. Full User Flows (Finalized)
 
-| Persona | Role |
-|---|---|
-| Primary Reporter | The person who receives the suspicious call/message first and checks it |
-| Circle Member | Family/group member who benefits from the early warning |
-| Elderly Parent (context persona) | The person most at risk — often the reason a younger relative sets up or monitors a circle |
+### Stage A — Anonymous visitor
+Lands on the site, uses Personal Check immediately — text, screenshot, or audio, no login wall. Gets a result with a large, plain-language verdict banner above the score, plus (new) a Chakshu-style complaint draft and a "copy to share" formatted alert. Can click "Report to Circle" without an account.
 
----
+### Stage B — Prompted auth (seamless)
+Clicking "Report to Circle" while logged out stashes the full analyzed result in browser session storage, then prompts sign in/up. On successful auth, the stashed result auto-submits to the circle they choose.
 
-## 5. User Flows
+### Stage C — Sign up / login
+Email + password + display name (required — needed for named confirmations). No email confirmation wait. Other members see your display name only, never your email.
 
-### Flow A — Personal Check
-1. User opens the app.
-2. Pastes suspicious text, OR uploads a screenshot, OR types a description of a call.
-3. System shows: **Risk Score (0–100)**, **Red Flags detected**, **plain-language explanation** (in chosen language), and a **suggested action** (e.g. "Do not share OTP," "Verify via the official app," link to report to cybercrime.gov.in).
-4. User can tap "Share to my circle" → moves into Flow B.
+### Stage D — Landing after auth
+Came via an invite link → auto-joined, land in its feed. Came via the seamless Stage B flow → land after auto-submitting. Came in cold → land on Scam Radar's empty state.
 
-### Flow B — Scam Radar / Circle Warning
-1. User selects or creates a "circle" (e.g. Family Group, Green Valley RWA).
-2. Submits a report (fresh, or carried over from Flow A).
-3. System checks: has something similar already been reported in this circle (or globally)? If yes, it clusters into an existing "campaign" and bumps a counter ("X people have reported this").
-4. All circle members instantly see the alert in their feed: *"New scam pattern reported in your circle: [summary]. If you get a similar call, do not [action]."*
+### Stage E — Scam Radar as the groups home
+Zero groups: empty state, "Create a Group" or "Have a link? Join here." One or more groups: circle selector (real groups) + feed, invite/member management, notification badge.
 
----
+### Stage F — Creating a group
+Name the group → shareable, reusable, admin-revocable invite link generated immediately → dropped into that group's empty feed.
 
-## 6. How the System Works (Plain-Language Architecture)
+### Stage G — Joining via invite link
+Logged in: quick confirm, then into the feed. Not logged in: invite code survives the signup detour and auto-joins right after.
 
-1. **Input capture** — text, screenshot, or typed call description.
-2. **Screenshot reading** — Gemini's vision capability reads the text directly out of the image (no separate OCR tool needed).
-3. **Rule-based checks** — quick, deterministic flags: urgency/payment/OTP keywords, suspicious links.
-4. **Pattern matching (lightweight embeddings)** — the report is compared against a small curated library of real, publicly documented Indian scam scripts. For the hackathon demo: precompute embeddings for ~10 example scam texts once, store as plain vectors in a JSON file, and compare the new message against them with cosine similarity — no vector database needed. *(Full vector-search infrastructure is a Could-Have — expand this only if you advance to the final round.)*
-5. **AI reasoning** — Gemini combines the rule-based flags + pattern match + its own read of the message into one score and a plain-language explanation, generated in the requested language.
-6. **Circle clustering** — if submitted to a circle, the system checks recent reports for similarity, clusters matches, and notifies circle members.
+### Stage H — Reporting, verifying, moderating
+"Report to Circle" shows real user groups. Report button copy is explicit ("Share this with [Circle Name]"). Each report card shows two visually distinct signals: AI-similarity clustering (existing) and named human confirmations (new, Instagram-style, 2-3 names then "+N more"). Reporter cannot confirm their own report. Reporter can delete their own report; admin can delete any report in their group.
+
+### Stage I — Group management
+Creator = admin automatically. Admin can remove members and revoke/regenerate the invite link. Any member can leave. Sole admin leaving = group continues, adminless.
 
 ---
 
-## 7. Feature List
+## 4. Architecture Decisions
 
-### 🔴 Must-Have (the demo does not work without these)
-- [ ] Text-paste input → risk score + explanation
-- [ ] Screenshot upload → text extraction → risk score + explanation
-- [ ] Multilingual explanation output (at least Hindi + English)
-- [ ] Rule-based flag checks (keywords, suspicious links)
-- [ ] "Report to circle" with 1–2 hardcoded demo circles
-- [ ] Circle feed showing a propagated warning
-- [ ] Clean, simple UI (score badge, flags list, explanation card)
-- [ ] Live deployed URL (Vercel)
+### Core Analysis Enhancements (Phase 7)
+- **Google Safe Browsing (Lookup API, `threatMatches.find`):** fourth deterministic signal. Extracts URLs already caught by the existing regex, checks against Google's live threat lists, adds a distinct strong flag ("Known malicious link") separate from the existing soft "Contains link/URL" flag. Separate Google Cloud API key. Fails gracefully — never blocks the overall check.
+- **Expanded pattern library (8 → 25-30):** quality-first, genuinely distinct new categories (additional phishing variants, insurance scams, romance scams, fake investment/crypto, exam/results scams, property/rental scams). Same architecture, no vector DB needed. Keep the original 8, append new ones, rerun the same batched precompute script.
 
-### 🟡 Should-Have (build these if the Must-Haves are done with time to spare)
-- [ ] Lightweight pattern-matching via precomputed embeddings (see Section 6) — this is your answer to "where's the technical depth?"
-- [ ] "X people reported this" counter across circles
-- [ ] Call-transcript analysis (paste what was said → same analysis pipeline)
-- [ ] In-app library of known scam patterns (e.g. "Digital Arrest Scam," "Fake UPI Refund") with real examples
+### Actionability & Credibility Upgrades (Phase 8)
+- **Auto-generated Chakshu-style complaint draft:** extend the *existing* `responseSchema` in the Phase 2 analysis call to add a `complaintDraft` field, generated in the same Gemini call — zero extra API cost or latency. Available immediately on any risky Personal Check result, not gated behind circle reporting/confirmation. Chakshu (a real, active Government of India facility under DoT's Sanchar Saathi) is specifically for reporting *suspected* fraud where no financial loss has occurred yet — matches this product's exact positioning ("catch it before you act on it"). If a result indicates financial loss may have already occurred, the draft/copy should note the correct channel is the cybercrime helpline (1930 / cybercrime.gov.in) instead.
+- **"Copy alert to share externally" button:** formats the analyzed result (message, flags, risk verdict, explanation) into clean, ready-to-paste WhatsApp-style text. Pure client-side formatting + browser Clipboard API — no new backend call. Partially closes the real-WhatsApp-integration gap that was cut earlier due to Business API approval-delay risk.
 
-### 🟢 Could-Have (stretch goals / roadmap talking points — don't build these now)
-- [ ] Full vector database (only if advancing to finals)
-- [ ] Real WhatsApp/SMS push integration
-- [ ] Browser extension for real-time webpage scam checks
-- [ ] Voice-based reporting
-- [ ] Community-verified reports (others in the circle can confirm/deny)
-- [ ] Direct integration with cybercrime.gov.in reporting
+### Auth & Groups — Supabase (Phase 9-10)
+- Postgres + built-in auth in one integration.
+- Tables: `profiles` (id, display_name), `groups` (id, name, created_by, invite_code), `group_members` (group_id, user_id, role: admin/member, joined_at).
+- Invite-link based joining, admin-revocable/regenerable codes.
+- Required email confirmation disabled for demo reliability.
+- Personal Check stays fully login-free.
+- Existing Redis (Upstash) reports layer kept as-is — Supabase group UUIDs replace the two hardcoded circle-name strings as the storage key.
+- Reports need a stable `reportId` for named confirmations; confirmations stored as a Redis set keyed to that ID.
+
+### Voice Note / Call Recording (Phase 11)
+- Third input mode, file upload only (live mic recording deferred).
+- Gemini's native audio understanding, reusing the Phase 2 pipeline (now also producing `complaintDraft`).
+- Content/pattern analysis only — not biometric voice-clone/deepfake detection.
+- `NOT_A_CALL` guard.
+- Should-Have: audio-specific content flags (scripted cadence, generic call-center phrasing).
+
+### Privacy & Data Handling
+- Only extracted text is ever stored for a report — never the raw image or audio file.
+- Gemini paid tier: not used for training, narrow exception for limited-time abuse-monitoring logs.
+- Redis reports get a TTL (default: 60 days, adjustable).
+- Explicit "Share this with [Circle Name]" language before posting.
+
+### Rate Limiting (Phase 13)
+- `@upstash/ratelimit` on `/api/check` only — 5 req/min, 25 req/day, per IP.
+- Distinct friendly messages: our own rate limit vs. Gemini's own quota-exceeded response. Never the raw error or the old debug fallback.
+- Safety-filter-blocked uploads: existing code already handles this — no changes.
+
+### Elderly Accessibility & Responsive Design
+- Large, plain-language verdict banner above the score.
+- Explanation prompt tuned for genuinely simple language.
+- Larger fonts and tap targets.
+- Fully responsive, tested at 3+ breakpoints (phone/tablet/desktop).
+- Footer AI-disclaimer line.
+
+### Deliberately Deferred — Talking Points Only, Do Not Build
+These were evaluated and consciously not built, for Q&A/pitch use only:
+- **Business Email Compromise / organizational circles:** the existing group system (invite links, roles, confirm/deny, pattern matching) is generic enough to extend to workplace fraud with minimal changes. Not built — dilutes pitch focus from the citizen/family-protection narrative for low added demo value. One-line Q&A answer only.
+- **Cross-circle pattern matching:** comparing reports across all circles (privacy-preserving) to show "this pattern was confirmed elsewhere in India." Real engineering (privacy design needed), not "basically free." Described as the natural next architectural step, not built now.
+- **Structured entity cross-referencing:** extracting and indexing phone numbers/UPI IDs across reports for harder evidence than semantic similarity. Same treatment — next-step talking point, not built now.
+- **Reporter trust score:** confirm/deny accuracy over time weighting future reports. Real complexity and fairness considerations. One line on the roadmap slide only.
 
 ---
 
-## 8. Tech Stack (Deliberately Simple)
+## 5. v2 Feature List
 
-- **Frontend:** Next.js (App Router), React, TypeScript, Tailwind CSS
-- **Backend:** Next.js API routes — no separate server needed
-- **AI:** Gemini API, handling extraction (vision), reasoning, scoring, and translation
-- **Pattern matching:** Gemini embeddings API + a plain JSON file of precomputed vectors, compared with cosine similarity in code
-- **Storage:** a simple SQLite file, or a free-tier Supabase project, to persist circle reports across the demo
-- **Hosting:** Vercel (free tier, one-click deploy)
-- **Build tool:** Google Antigravity (agent-first IDE, Planning Mode)
+### 🔴 Must-Have
+- [ ] Google Safe Browsing link-safety check
+- [ ] Expanded pattern library (25-30, quality-first)
+- [ ] Chakshu-style complaint draft (schema extension, zero extra API cost)
+- [ ] "Copy alert to share externally" formatted text
+- [ ] Signup/login/logout (Supabase, display name required, email confirmation disabled)
+- [ ] Create a group, revocable/regenerable invite link
+- [ ] Join a group via invite link (incl. not-logged-in detour)
+- [ ] "Report to Circle" shows real user groups
+- [ ] Seamless auto-submit-after-login for anonymous users
+- [ ] Voice note / call recording upload
+- [ ] `NOT_A_CALL` guard
+- [ ] Named community confirmations (self-vote excluded, visually distinct badge)
+- [ ] Reporter can delete own report; admin can delete any report
+- [ ] Admin can remove members; any member can leave
+- [ ] Rate limiting on `/api/check`
+- [ ] Distinct Gemini-quota-exceeded message
+- [ ] Large plain-language verdict banner
+- [ ] Responsive design, 3+ breakpoints
+- [ ] Footer AI disclaimer
+
+### 🟡 Should-Have
+- [ ] Audio-specific content flags
+- [ ] Redis TTL auto-expiry (60 days)
+- [ ] In-app notification badge
+- [ ] Explicit "Share this with [Circle Name]" button copy
+
+### 🟢 Could-Have
+- [ ] Personal history page
+- [ ] Live in-browser mic recording
+- [ ] Voice dictation for describing a call
+- [ ] Admin-transfer flow if sole admin leaves
+- [ ] Account deletion
+
+### 📋 Talking Points Only (Do Not Build)
+- [ ] BEC / organizational circles
+- [ ] Cross-circle pattern matching
+- [ ] Structured entity cross-referencing
+- [ ] Reporter trust score
 
 ---
 
-## 9. Vibe-Coding Feasibility
+## 6. Day-by-Day Plan (solo build, teammates test)
 
-| Component | Difficulty | Notes |
+| Day | Phase | Focus |
 |---|---|---|
-| Text scam analysis (Gemini call) | Very Easy | Core strength of AI coding tools |
-| Screenshot → text | Easy | Gemini's vision handles this directly |
-| Multilingual output | Very Easy | Native Gemini capability |
-| Rule-based checks | Easy | Simple, well-defined logic |
-| Lightweight embeddings + cosine similarity | Moderate | No vector DB — just an array comparison, genuinely low-risk |
-| Circle feed / clustering logic | Moderate | Mostly standard app logic (lists, grouping) |
-| Deployment to Vercel | Easy–Moderate | Usually smooth, but always test the live URL, not just localhost |
+| 1 | 7 | Google Safe Browsing + expand pattern library to 25-30 |
+| 1 (cont.) | 8 | Chakshu draft field (schema extension) + share-externally formatted alert |
+| 2 | 9 | Supabase project setup; signup/login/logout — no groups yet |
+| 3 | 10 | Group schema + roles, invite-link flow (incl. not-logged-in detour), member list, admin remove/leave, migrate "Report to Circle," seamless anonymous-report-then-login |
+| 4 | 11 | Voice note/call recording upload, `NOT_A_CALL` guard |
+| 5 | 12 | Named community confirmations, reporter/admin report deletion, Redis TTL |
+| 6 | 13 | Rate limiting, Gemini-quota handling, verdict banner, disclaimer, notification badge |
+| 7 | 14 | Full regression test on a branch, responsive testing, merge, redeploy, verify live URL |
+| — | 15 | Refresh demo video/PPT, final buffer, teammates test |
 
-**Overall feasibility: HIGH.**
-
----
-
-## 10. Solo Build Sequence
-
-Since you're building alone, this is organized as sequential **phases**, not fixed days — move to the next phase only once the current one is tested and working. Commit to git after every phase.
-
-| Phase | Goal | Definition of done |
-|---|---|---|
-| 1 | Project skeleton with fake data | Paste text → click button → see a hardcoded fake result end-to-end |
-| 2 | Real AI analysis | Real Gemini call replaces the fake response; tested with 3 different messages |
-| 3 | Screenshot upload | Upload a screenshot → same result pipeline works |
-| 4 | Multilingual toggle | ✅ English/Hindi switch changes the explanation language — tested with both |
-| 5 | Lightweight pattern matching | Known scam examples correctly get flagged as "matches known pattern" |
-| 6 | Scam Radar | Submit to a circle → feed updates → similar reports cluster |
-| 7 | UI polish | Clean layout, color-coded score, mobile-responsive |
-| 8 | Deploy | Live Vercel URL, tested end-to-end (not just localhost) |
-| 9 | Demo prep | Screenshots captured, backup video recorded, pitch rehearsed |
+**Ground rule unchanged:** work on a git branch, keep `main` as the safe deployed fallback throughout. Don't force Day 1's expanded scope into a literal single calendar day if it runs long — all four pieces are low-risk, worth finishing properly.
 
 ---
 
-## 11. Demo Script (aim for under 3 minutes)
+## 7. Tech Stack Additions
 
-1. Open with the real-world hook (digital arrest scams, a real headline stat).
-2. Paste a real, well-known scam message live → show instant score + explanation.
-3. Show the multilingual toggle.
-4. Switch to Circle view — show a pre-staged report propagating in the feed.
-5. Close on the "X people already reported this" counter, then the roadmap (WhatsApp integration, full vector search, cybercrime.gov.in link).
-
----
-
-## 12. Key Risks & How We Handle Them
-
-| Risk | Mitigation |
-|---|---|
-| "This is just an LLM wrapper" | Lead the pitch with the pattern-matching/clustering architecture, not just the AI call |
-| AI gives inconsistent scores | Test repeatedly with the same 10–15 examples; tune the prompt until stable |
-| Live demo failure | Have a recorded backup video + cached example outputs ready |
-| Solo builder fatigue/blind spots | Test each phase before moving on — do not stack untested features |
+- Google Safe Browsing API (Lookup API, separate Google Cloud API key)
+- Browser Clipboard API (native, no library — for the share-externally button)
+- `@supabase/supabase-js`, `@supabase/ssr`
+- `@upstash/ratelimit`
+- Supabase Postgres (profiles, groups, group_members)
+- Existing stack unchanged otherwise
 
 ---
 
-## 13. How This Maps to Judging Criteria
+## 8. Judging Criteria Mapping (Updated)
 
-- **Novelty:** multi-signal detection + social-speed community propagation — not just another fraud dashboard
-- **Technical Execution:** a real pipeline (rules + pattern-matching + AI reasoning + clustering), not a single prompt
-- **Impact:** directly addresses a documented, urgent, India-specific problem
-- **Presentation:** highly demo-able, visual, understandable in seconds
+- **Novelty:** community propagation + real trust-verified circles + multi-modal detection + multi-signal analysis (rules, embeddings, LLM, real threat intelligence) + direct alignment with a real government reporting channel
+- **Technical Execution:** auth, relational data modeling, multimodal AI input, rate limiting, graceful degradation, external threat-intel integration, zero-marginal-cost schema extension for the complaint draft
+- **Impact:** scam detection + the deepfake half of the PS title + elderly-user design consideration + a direct, accurate bridge to Chakshu's actual stated purpose (pre-loss fraud reporting)
+- **Presentation:** live URL judges can personally test; responsible-deployment signals (disclaimer, data minimization, rate limiting); confident, well-reasoned answers on the deliberately-deferred features if asked
