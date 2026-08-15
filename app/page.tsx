@@ -68,6 +68,7 @@ function MiniRiskBadge({ score }: { score: number }) {
 
 export default function Home() {
   const [appMode, setAppMode] = useState<"personal" | "radar">("personal");
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   
   const [activeTab, setActiveTab] = useState<"text" | "image">("text");
   const [language, setLanguage] = useState<"en" | "hi">("en");
@@ -206,77 +207,335 @@ export default function Home() {
   }, [appMode, selectedCircle]);
 
   return (
-    <div className="min-h-screen bg-[#0d0f14] text-slate-100 font-sans">
-      {/* Background glow blobs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-violet-700/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-red-700/15 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-[#fbf9e4] text-slate-100 font-sans flex flex-col justify-between" onClick={() => profileMenuOpen && setProfileMenuOpen(false)}>
+      {/* Black Wavy Navbar with Profile Dropdown on Extreme Left */}
+      <div className="w-full relative select-none">
+        {/* Solid Black Header */}
+        <nav className="w-full bg-[#232323] text-white px-5 sm:px-8 pt-3 pb-1 flex items-center justify-between relative z-30">
+          {/* Shield Logo on Left */}
+          <div className="flex items-center">
+            <img
+              src="/assets/shield-logo.png"
+              alt="Scam Shield Logo"
+              className="h-7 sm:h-8 w-auto object-contain"
+            />
+          </div>
+
+          {/* Simple Black & Beige Profile Logo with Down Arrow (No Outer Border) */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setProfileMenuOpen((prev) => !prev);
+              }}
+              className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform p-0.5"
+              aria-label="Profile and Settings Menu"
+            >
+              {/* Simple Black & Beige Circular Avatar */}
+              <div className="w-8 h-8 rounded-full bg-[#EDE8D0] flex items-center justify-center shadow-sm">
+                <svg className="w-4.5 h-4.5 text-[#232323]" viewBox="0 0 24 24" fill="currentColor">
+                  <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                </svg>
+              </div>
+
+              {/* Down Arrow Chevron */}
+              <svg
+                className={`w-3.5 h-3.5 transition-transform text-[#EDE8D0] ${profileMenuOpen ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Profile & Settings Dropdown Menu (Aligned to Right) */}
+            {profileMenuOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 mt-2 w-56 bg-[#232323] border border-white/15 rounded-2xl shadow-2xl p-2 z-50 animate-fade-in backdrop-blur-lg"
+              >
+                <div className="px-3 py-2 border-b border-white/10 mb-1">
+                  <p className="text-xs font-bold text-white">Shield Account</p>
+                  <p className="text-[11px] text-slate-400">user@scamshield.ai</p>
+                </div>
+                <div className="space-y-0.5 text-xs text-slate-200 font-medium">
+                  <button
+                    onClick={() => {
+                      alert("Opening Settings...");
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors cursor-pointer"
+                  >
+                    <span>⚙️</span> Settings
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAppMode("radar");
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors cursor-pointer"
+                  >
+                    <span>🛡️</span> My Circles
+                  </button>
+                  <button
+                    onClick={() => {
+                      alert("Threat Notifications: Enabled");
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors cursor-pointer"
+                  >
+                    <span>🔔</span> Notifications
+                  </button>
+                  <button
+                    onClick={() => {
+                      alert("Preferences: AI Realtime Protection ON");
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors cursor-pointer"
+                  >
+                    <span>📊</span> Threat Preferences
+                  </button>
+                </div>
+                <div className="pt-1 mt-1 border-t border-white/10">
+                  <button
+                    onClick={() => {
+                      alert("Signing out...");
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-red-500/20 text-red-400 text-xs font-semibold text-left transition-colors cursor-pointer"
+                  >
+                    <span>🚪</span> Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </nav>
+
+        {/* Flowing Black Wave */}
+        <div className="w-full relative z-10 -mt-0.5 pointer-events-none">
+          <svg
+            className="w-full h-8 sm:h-12 md:h-14 block overflow-visible"
+            viewBox="0 0 1440 60"
+            preserveAspectRatio="none"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ filter: "drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.18))" }}
+          >
+            <path
+              d="M 0,0 L 1440,0 L 1440,24 C 1240,48 980,10 680,32 C 380,52 160,8 0,28 Z"
+              fill="#232323"
+            />
+          </svg>
+        </div>
       </div>
 
-      <div className="relative max-w-2xl mx-auto px-4 py-8">
-        {/* Header */}
-        <header className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <span className="text-3xl">🛡️</span>
-            <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-red-400 bg-clip-text text-transparent">
-              Scam Shield
-            </h1>
-          </div>
-          <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed mb-6">
-            Instantly analyse suspicious messages, and warn your circle before they fall for the same scam.
-          </p>
+      <div className="relative max-w-5xl mx-auto px-4 pt-2 sm:pt-4 pb-6 sm:pb-8 w-full flex-1">
+        {/* Main Title: 2-Line Stacked SCAM / SHEILD with Ultra-Tight Line Spacing & Box Overlap */}
+        <div className="text-center -mb-12 sm:-mb-20 md:-mb-28 lg:-mb-36 select-none relative z-0 flex flex-col items-center">
+          <h1 className="font-tall text-6xl sm:text-8xl md:text-9xl lg:text-[11rem] xl:text-[12.5rem] font-bold tracking-[0.12em] sm:tracking-[0.16em] text-[#232323]/65 uppercase flex flex-col items-center leading-[0.76] sm:leading-[0.78]">
+            <span>SCAM</span>
+            <span>SHEILD</span>
+          </h1>
+        </div>
 
-          {/* App Mode Toggle */}
-          <div className="flex justify-center gap-2 border border-white/10 rounded-xl p-1 bg-white/5 inline-flex backdrop-blur-sm">
-            <button
-              onClick={() => setAppMode("personal")}
-              className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
-                appMode === "personal"
-                  ? "bg-violet-500/20 text-violet-300 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-              }`}
-            >
-              Personal Check
-            </button>
-            <button
-              onClick={() => setAppMode("radar")}
-              className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all flex gap-2 items-center ${
+        {/* 3D Overlapping Box Layout */}
+        <section className="mb-10 sm:mb-14 relative z-10 w-full max-w-4xl mx-auto h-[460px] sm:h-[560px] md:h-[680px] lg:h-[720px] select-none translate-x-[2.5%] sm:translate-x-0">
+          {/* Layer 0: Background Layer Dark Slate Pads (#31487A) */}
+          <div
+            className="absolute rounded-3xl bg-[#31487A] box-3d-shadow-dark opacity-90 transition-all pointer-events-none"
+            style={{ top: "8%", left: "36%", width: "28%", height: "26%", zIndex: 4 }}
+          />
+          <div
+            className="absolute rounded-3xl bg-[#31487A] box-3d-shadow-dark opacity-90 transition-all pointer-events-none"
+            style={{ top: "34%", left: "4%", width: "24%", height: "26%", zIndex: 4 }}
+          />
+          <div
+            className="absolute rounded-3xl bg-[#31487A] box-3d-shadow-dark opacity-90 transition-all pointer-events-none"
+            style={{ top: "44%", left: "56%", width: "32%", height: "36%", zIndex: 4 }}
+          />
+          {/* Bottom-Left Pad (widened & shifted to cleanly frame Box 8) */}
+          <div
+            className="absolute rounded-2xl bg-[#31487A] box-3d-shadow-dark opacity-90 transition-all pointer-events-none top-[81%] md:top-[75%] left-[-5%] w-[23%] h-[24%]"
+            style={{ zIndex: 4 }}
+          />
+          {/* 1. Vertical dark blue box under Personal Checker */}
+          <div
+            className="absolute rounded-3xl bg-[#31487A] box-3d-shadow-dark opacity-90 transition-all pointer-events-none"
+            style={{ top: "48%", left: "22%", width: "22%", height: "38%", zIndex: 3 }}
+          />
+          {/* 2. Small dark blue box in between Scam Radar and Bilingual AI (to the right) */}
+          <div
+            className="absolute rounded-2xl bg-[#31487A] box-3d-shadow-dark opacity-90 transition-all pointer-events-none"
+            style={{ top: "10%", left: "84%", width: "15%", height: "18%", zIndex: 4 }}
+          />
+
+          {/* Layer 1: Foreground Floating Light (#CFEBF1) & Hero (#7CB8F2) Boxes */}
+
+          {/* 1. Top-Right Peak Box (#CFEBF1) — z-index 14 so Scam Radar overlaps it */}
+          <div
+            className="absolute floating-box-wrapper"
+            style={{ top: "2%", left: "74%", width: "22%", zIndex: 14 }}
+          >
+            <div className="floating-card w-full aspect-square bg-[#CFEBF1] rounded-3xl box-3d-shadow flex items-center justify-center p-3 sm:p-4 border border-[#CFEBF1]/60 text-center text-[#0f172a] font-medium transition-all overflow-hidden" />
+          </div>
+
+          {/* 2. Top-Left Peak Small Box (#CFEBF1) */}
+          <div
+            className="absolute floating-box-wrapper"
+            style={{ top: "8%", left: "24%", width: "20%", zIndex: 22 }}
+          >
+            <div className="floating-card w-full aspect-square bg-[#CFEBF1] rounded-2xl box-3d-shadow flex items-center justify-center p-2.5 sm:p-3.5 border border-[#CFEBF1]/60 text-center text-[#0f172a] font-medium transition-all overflow-hidden" />
+          </div>
+
+          {/* 3. Upper-Left Medium Box (#CFEBF1) */}
+          <div
+            className="absolute floating-box-wrapper"
+            style={{ top: "24%", left: "14%", width: "28%", zIndex: 20 }}
+          >
+            <div className="floating-card w-full aspect-square bg-[#CFEBF1] rounded-3xl box-3d-shadow flex items-center justify-center p-3 sm:p-5 border border-[#CFEBF1]/60 text-center text-[#0f172a] font-medium transition-all overflow-hidden" />
+          </div>
+
+          {/* 4. Top-Right Large Hero Box (#7CB8F2) — SCAM RADAR (overlaps Top-Right Light Box) */}
+          <div
+            className="absolute floating-box-wrapper"
+            style={{ top: "18%", left: "48%", width: "48%", zIndex: 28 }}
+          >
+            <div
+              className={`floating-card bg-[#7CB8F2] rounded-3xl p-4 sm:p-6 md:p-7 box-3d-shadow flex flex-col justify-between border transition-all ${
                 appMode === "radar"
-                  ? "bg-violet-500/20 text-violet-300 shadow-sm"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                  ? "border-[#31487A] ring-4 ring-[#31487A]/30 shadow-2xl"
+                  : "border-[#7CB8F2]/70 hover:border-[#31487A]/50"
               }`}
             >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
-              </span>
-              Scam Radar
-            </button>
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/50 text-[#0f172a] text-[10px] sm:text-xs font-bold tracking-wide uppercase">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    Live Feed
+                  </div>
+                </div>
+                <h3 className="text-lg sm:text-2xl md:text-3xl font-extrabold text-[#0f172a] tracking-tight">
+                  Scam Radar
+                </h3>
+                <p className="text-[#1e293b]/90 text-[11px] sm:text-xs md:text-sm leading-relaxed hidden sm:block">
+                  Crowd-sourced scam alerts to protect your family, housing societies & friends.
+                </p>
+              </div>
+              <div className="mt-3 sm:mt-5 pt-1">
+                <button
+                  onClick={() => {
+                    setAppMode("radar");
+                    document.getElementById("active-tool-view")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className={`w-full sm:w-auto px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${
+                    appMode === "radar"
+                      ? "bg-[#232323] text-[#CFEBF1] ring-2 ring-white/20"
+                      : "bg-[#31487A] text-white hover:bg-[#232323]"
+                  }`}
+                >
+                  <span>{appMode === "radar" ? "✓ Active: Scam Radar" : "Scam Radar →"}</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </header>
 
+          {/* 5. Bottom-Left Large Hero Box (#7CB8F2) — PERSONAL CHECKER */}
+          <div
+            className="absolute floating-box-wrapper"
+            style={{ top: "44%", left: "2%", width: "48%", zIndex: 24 }}
+          >
+            <div
+              className={`floating-card bg-[#7CB8F2] rounded-3xl p-4 sm:p-6 md:p-7 box-3d-shadow flex flex-col justify-between border transition-all ${
+                appMode === "personal"
+                  ? "border-[#31487A] ring-4 ring-[#31487A]/30 shadow-2xl"
+                  : "border-[#7CB8F2]/70 hover:border-[#31487A]/50"
+              }`}
+            >
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/50 text-[#0f172a] text-[10px] sm:text-xs font-bold tracking-wide uppercase">
+                    <span>🛡️</span> Defense
+                  </div>
+                </div>
+                <h3 className="text-lg sm:text-2xl md:text-3xl font-extrabold text-[#0f172a] tracking-tight">
+                  Personal Checker
+                </h3>
+                <p className="text-[#1e293b]/90 text-[11px] sm:text-xs md:text-sm leading-relaxed hidden sm:block">
+                  Instant AI threat detection on suspicious SMS, WhatsApp chats & phishing links.
+                </p>
+              </div>
+              <div className="mt-3 sm:mt-5 pt-1">
+                <button
+                  onClick={() => {
+                    setAppMode("personal");
+                    document.getElementById("active-tool-view")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className={`w-full sm:w-auto px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${
+                    appMode === "personal"
+                      ? "bg-[#232323] text-[#CFEBF1] ring-2 ring-white/20"
+                      : "bg-[#31487A] text-white hover:bg-[#232323]"
+                  }`}
+                >
+                  <span>{appMode === "personal" ? "✓ Active: Personal Checker" : "Personal Checker →"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 6. Center Medium Box (#CFEBF1) */}
+          <div
+            className="absolute floating-box-wrapper"
+            style={{ top: "50%", left: "50%", width: "26%", zIndex: 22 }}
+          >
+            <div className="floating-card w-full aspect-square bg-[#CFEBF1] rounded-3xl box-3d-shadow flex items-center justify-center p-3 sm:p-4 border border-[#CFEBF1]/60 text-center text-[#0f172a] font-medium transition-all overflow-hidden" />
+          </div>
+
+          {/* 7. Center Small Box (#CFEBF1) — moved to right a bit so it doesn't overlap Box 6 */}
+          <div
+            className="absolute floating-box-wrapper"
+            style={{ top: "68%", left: "62%", width: "19%", zIndex: 22 }}
+          >
+            <div className="floating-card w-full aspect-square bg-[#CFEBF1] rounded-2xl box-3d-shadow flex items-center justify-center p-2 sm:p-3 border border-[#CFEBF1]/60 text-center text-[#0f172a] font-medium transition-all overflow-hidden" />
+          </div>
+
+          {/* 8. Bottom-Left Small Box (#CFEBF1) — moved left by ~20% of its width & lower on phone */}
+          <div
+            className="absolute floating-box-wrapper top-[84%] md:top-[78%] left-[-4.5%] w-[17%]"
+            style={{ zIndex: 26 }}
+          >
+            <div className="floating-card w-full aspect-square bg-[#CFEBF1] rounded-2xl box-3d-shadow flex items-center justify-center p-2 sm:p-3 border border-[#CFEBF1]/60 text-center text-[#0f172a] font-medium transition-all overflow-hidden" />
+          </div>
+        </section>
+
+        {/* Active Tool View */}
+        <div id="active-tool-view" className="max-w-2xl mx-auto w-full">
         {appMode === "personal" ? (
           <>
             {/* Input card */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 shadow-xl mb-6">
+            <div className="rounded-3xl border border-black/10 bg-[#232323] text-white p-6 sm:p-8 shadow-2xl mb-8">
               {/* Tabs */}
               <div className="flex gap-2 mb-6 border-b border-white/10 pb-4">
                 <button
                   onClick={() => setActiveTab("text")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
                     activeTab === "text"
-                      ? "bg-violet-500/20 text-violet-300"
-                      : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                      ? "bg-[#7CB8F2] text-[#0f172a] shadow-sm"
+                      : "text-slate-400 hover:bg-white/10 hover:text-slate-100"
                   }`}
                 >
                   Paste Text
                 </button>
                 <button
                   onClick={() => setActiveTab("image")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
                     activeTab === "image"
-                      ? "bg-violet-500/20 text-violet-300"
-                      : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                      ? "bg-[#7CB8F2] text-[#0f172a] shadow-sm"
+                      : "text-slate-400 hover:bg-white/10 hover:text-slate-100"
                   }`}
                 >
                   Upload Screenshot
@@ -287,7 +546,7 @@ export default function Home() {
                 <div>
                   <label
                     htmlFor="message-input"
-                    className="block text-sm font-semibold text-slate-300 mb-3"
+                    className="block text-sm font-semibold text-slate-200 mb-3"
                   >
                     Suspicious message
                   </label>
@@ -297,16 +556,16 @@ export default function Home() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder={`Paste the suspicious message here… e.g. "Your bank account will be blocked. Call 9999-XXXX immediately."`}
-                    className="w-full rounded-xl bg-white/5 border border-white/10 text-slate-100 placeholder-slate-500 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none transition"
+                    className="w-full rounded-2xl bg-[#181818] border border-white/15 text-slate-100 placeholder-slate-400 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7CB8F2] resize-none transition"
                   />
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-3">
+                  <label className="block text-sm font-semibold text-slate-200 mb-3">
                     Suspicious screenshot
                   </label>
                   <div 
-                    className="w-full border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-violet-500/50 hover:bg-white/5 transition-all"
+                    className="w-full border-2 border-dashed border-white/20 rounded-2xl p-8 text-center cursor-pointer hover:border-[#7CB8F2] hover:bg-white/5 transition-all"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <input 
@@ -316,9 +575,9 @@ export default function Home() {
                       onChange={handleImageChange}
                       className="hidden"
                     />
-                    <div className="text-slate-400 text-sm">
+                    <div className="text-slate-300 text-sm">
                       {imageFile ? (
-                        <span className="text-violet-300 font-medium">{imageFile.name}</span>
+                        <span className="text-[#7CB8F2] font-semibold">{imageFile.name}</span>
                       ) : (
                         <span>Click to browse or drag a screenshot here</span>
                       )}
@@ -330,14 +589,14 @@ export default function Home() {
               {/* Language toggle */}
               <div className="mt-6 flex items-center gap-3">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Language</span>
-                <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
+                <div className="flex gap-1 rounded-xl border border-white/15 bg-[#181818] p-1">
                   <button
                     id="lang-en"
                     onClick={() => setLanguage("en")}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                       language === "en"
-                        ? "bg-violet-500/30 text-violet-200"
-                        : "text-slate-400 hover:text-slate-200"
+                        ? "bg-[#7CB8F2] text-[#0f172a]"
+                        : "text-slate-400 hover:text-slate-100"
                     }`}
                   >
                     EN
@@ -345,10 +604,10 @@ export default function Home() {
                   <button
                     id="lang-hi"
                     onClick={() => setLanguage("hi")}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                       language === "hi"
-                        ? "bg-violet-500/30 text-violet-200"
-                        : "text-slate-400 hover:text-slate-200"
+                        ? "bg-[#7CB8F2] text-[#0f172a]"
+                        : "text-slate-400 hover:text-slate-100"
                     }`}
                   >
                     हिं
@@ -360,10 +619,10 @@ export default function Home() {
                 id="check-button"
                 onClick={handleCheck}
                 disabled={loading || (activeTab === "text" ? !text.trim() : !imageFile)}
-                className="mt-6 w-full py-3 rounded-xl font-semibold text-sm tracking-wide transition-all
-                  bg-gradient-to-r from-violet-600 to-red-500 hover:from-violet-500 hover:to-red-400
-                  disabled:opacity-40 disabled:cursor-not-allowed
-                  shadow-lg hover:shadow-violet-500/30 active:scale-[0.98]"
+                className="mt-6 w-full py-3.5 rounded-2xl font-bold text-sm tracking-wide transition-all
+                  bg-gradient-to-r from-[#7CB8F2] via-[#5A97D9] to-[#31487A] text-white hover:opacity-95
+                  disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer
+                  shadow-lg active:scale-[0.98]"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -385,8 +644,8 @@ export default function Home() {
 
             {/* Image Preview */}
             {activeTab === "image" && imagePreview && result && (
-              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 shadow-xl mb-6 flex justify-center animate-fade-in">
-                <img src={imagePreview} alt="Screenshot preview" className="max-h-48 rounded-lg border border-white/20 object-contain" />
+              <div className="rounded-3xl border border-black/10 bg-[#232323] p-4 shadow-2xl mb-6 flex justify-center animate-fade-in">
+                <img src={imagePreview} alt="Screenshot preview" className="max-h-48 rounded-xl border border-white/20 object-contain" />
               </div>
             )}
 
@@ -401,7 +660,7 @@ export default function Home() {
             {result && (
               <div
                 id="results-card"
-                className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 shadow-xl space-y-6 animate-fade-in"
+                className="rounded-3xl border border-black/10 bg-[#232323] text-white p-6 sm:p-8 shadow-2xl space-y-6 mb-8 animate-fade-in"
               >
                 <h2 className="text-lg font-bold text-slate-100">Analysis Result</h2>
 
@@ -439,10 +698,10 @@ export default function Home() {
                         setShareAlertCopied(true);
                         setTimeout(() => setShareAlertCopied(false), 2000);
                       } catch {
-                        // fallback: select a hidden textarea — browser may block clipboard without gesture
+                        // fallback
                       }
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-white/15 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-slate-100 transition-all active:scale-95"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-white/15 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-slate-100 transition-all active:scale-95 cursor-pointer"
                   >
                     {shareAlertCopied ? "✓ Copied!" : "📤 Copy Alert to Share"}
                   </button>
@@ -472,14 +731,14 @@ export default function Home() {
                   <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">
                     Explanation
                   </h3>
-                  <p className="text-slate-300 text-sm leading-relaxed bg-white/5 rounded-xl px-4 py-3 border border-white/10">
+                  <p className="text-slate-200 text-sm leading-relaxed bg-[#181818] rounded-2xl px-4 py-3 border border-white/10">
                     {result.explanation}
                   </p>
                 </div>
 
                 {/* Chakshu complaint draft — shown when riskScore >= 75 and draft is non-empty */}
                 {result.riskScore >= 75 && result.complaintDraft && result.complaintDraft.trim() !== "" && (
-                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 sm:p-5 space-y-3">
                     <div className="flex items-center justify-between gap-2">
                       <h3 className="text-sm font-bold text-amber-300 flex items-center gap-2">
                         📋 Chakshu Complaint Draft
@@ -495,7 +754,7 @@ export default function Home() {
                             // clipboard blocked
                           }
                         }}
-                        className="flex-shrink-0 px-3 py-1 rounded-lg text-xs font-semibold border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-all active:scale-95"
+                        className="flex-shrink-0 px-3 py-1 rounded-lg text-xs font-semibold border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-all active:scale-95 cursor-pointer"
                       >
                         {draftCopied ? "✓ Copied!" : "Copy Draft"}
                       </button>
@@ -503,7 +762,7 @@ export default function Home() {
 
                     {/* Channel routing note */}
                     {result.financialLossLikely ? (
-                      <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-xs text-red-300 leading-relaxed">
+                      <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-xs text-red-300 leading-relaxed">
                         ⚠️ <strong>This message suggests money may have already been sent or lost.</strong> The right channel is the{" "}
                         <strong>Cyber Crime Helpline: 1930</strong> or{" "}
                         <a
@@ -523,7 +782,7 @@ export default function Home() {
                           href="https://sancharsaathi.gov.in/Home/ss-feedback.jsp"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-violet-400 hover:text-violet-300 underline"
+                          className="text-[#7CB8F2] hover:underline"
                         >
                           File at Sanchar Saathi →
                         </a>
@@ -531,7 +790,7 @@ export default function Home() {
                     )}
 
                     {/* The draft text itself */}
-                    <pre className="whitespace-pre-wrap font-mono text-xs text-slate-300 bg-black/30 rounded-lg px-3 py-3 border border-white/10 leading-relaxed">
+                    <pre className="whitespace-pre-wrap font-mono text-xs text-slate-300 bg-black/40 rounded-xl px-3.5 py-3 border border-white/10 leading-relaxed">
                       {result.complaintDraft}
                     </pre>
                   </div>
@@ -551,15 +810,15 @@ export default function Home() {
                     <select
                       value={reportCircleId}
                       onChange={(e) => setReportCircleId(e.target.value)}
-                      className="flex-1 rounded-xl bg-white/5 border border-white/10 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      className="flex-1 rounded-xl bg-[#181818] border border-white/15 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7CB8F2]"
                     >
-                      <option value="sharma-family" className="bg-slate-900">Sharma Family Group</option>
-                      <option value="green-valley-rwa" className="bg-slate-900">Green Valley RWA</option>
+                      <option value="sharma-family" className="bg-[#232323]">Sharma Family Group</option>
+                      <option value="green-valley-rwa" className="bg-[#232323]">Green Valley RWA</option>
                     </select>
                     <button
                       onClick={handleReport}
                       disabled={reportStatus === "loading" || reportStatus === "success"}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-2 rounded-xl text-sm font-bold bg-[#31487A] hover:bg-[#7CB8F2] hover:text-[#0f172a] text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                     >
                       {reportStatus === "loading" ? "Reporting..." : reportStatus === "success" ? "✓ Reported" : "Report"}
                     </button>
@@ -580,21 +839,21 @@ export default function Home() {
           </>
         ) : (
           /* RADAR VIEW */
-          <div className="animate-fade-in">
+          <div className="animate-fade-in mb-8">
             <div className="flex items-center justify-between mb-6">
               <select
                 value={selectedCircle}
                 onChange={(e) => setSelectedCircle(e.target.value)}
-                className="rounded-xl bg-white/5 border border-white/10 text-slate-100 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 shadow-xl"
+                className="rounded-2xl bg-[#232323] border border-black/10 text-slate-100 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7CB8F2] shadow-xl"
               >
-                <option value="sharma-family" className="bg-slate-900">Sharma Family Group</option>
-                <option value="green-valley-rwa" className="bg-slate-900">Green Valley RWA</option>
+                <option value="sharma-family" className="bg-[#232323]">Sharma Family Group</option>
+                <option value="green-valley-rwa" className="bg-[#232323]">Green Valley RWA</option>
               </select>
               
               <button
                 onClick={fetchFeed}
                 disabled={feedLoading}
-                className="px-4 py-2 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-50 transition-colors"
+                className="px-4 py-2.5 rounded-2xl text-sm font-bold bg-[#232323] hover:bg-[#31487A] text-white border border-black/10 shadow-xl disabled:opacity-50 transition-colors cursor-pointer"
               >
                 {feedLoading ? "Refreshing..." : "↻ Refresh Feed"}
               </button>
@@ -608,12 +867,12 @@ export default function Home() {
 
             <div className="space-y-4">
               {feedReports.length === 0 && !feedLoading ? (
-                <div className="text-center py-12 border border-dashed border-white/10 rounded-2xl">
-                  <p className="text-slate-400 text-sm">No reports in this circle yet.</p>
+                <div className="text-center py-12 border border-dashed border-black/15 bg-[#232323] rounded-3xl text-white">
+                  <p className="text-slate-300 text-sm">No reports in this circle yet.</p>
                 </div>
               ) : (
                 feedReports.map((report) => (
-                  <div key={report.id} className="rounded-2xl border border-white/10 bg-white/5 p-4 flex gap-4 backdrop-blur-sm shadow-xl">
+                  <div key={report.id} className="rounded-3xl border border-black/10 bg-[#232323] text-white p-5 flex gap-4 shadow-xl">
                     <div className="flex-shrink-0">
                       <MiniRiskBadge score={report.riskScore} />
                     </div>
@@ -629,18 +888,18 @@ export default function Home() {
                         </div>
                       )}
                       
-                      <p className="text-sm text-slate-200 line-clamp-3 italic opacity-80 border-l-2 border-white/20 pl-2">
+                      <p className="text-sm text-slate-200 line-clamp-3 italic opacity-90 border-l-2 border-[#7CB8F2] pl-2.5">
                         "{report.text}"
                       </p>
 
-                      <div className="bg-black/20 rounded-lg p-3 text-sm text-slate-300">
+                      <div className="bg-[#181818] rounded-xl p-3 text-sm text-slate-300 border border-white/10">
                         {report.explanation}
                       </div>
 
                       {report.flags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           {report.flags.map((flag, idx) => (
-                            <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10">
+                            <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-slate-300 border border-white/10">
                               {flag}
                             </span>
                           ))}
@@ -653,7 +912,35 @@ export default function Home() {
             </div>
           </div>
         )}
+        </div>
       </div>
+
+      {/* 2-Layer Organic Wave Footer (Caramel #C68B59 & Black #232323 - Seamless Overlap) */}
+      <footer className="w-full mt-12 overflow-hidden pointer-events-none select-none">
+        <div className="w-full relative">
+          <svg
+            className="w-full h-24 sm:h-32 md:h-40 block overflow-visible"
+            viewBox="0 0 1440 160"
+            preserveAspectRatio="none"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Layer 1: Caramel #C68B59 Upper Wave */}
+            <path
+              d="M 0,38 C 260,85 460,8 800,42 C 1100,78 1280,18 1440,42 L 1440,161 L 0,161 Z"
+              fill="#C68B59"
+            />
+            {/* Layer 2: Black #232323 Base Wave (Directly Overlapping Caramel Layer) */}
+            <path
+              d="M 0,62 C 320,24 600,90 940,48 C 1180,16 1340,64 1440,50 L 1440,161 L 0,161 Z"
+              fill="#232323"
+              style={{ filter: "drop-shadow(0px -4px 6px rgba(0, 0, 0, 0.25))" }}
+            />
+          </svg>
+          {/* Solid Black Base Foundation */}
+          <div className="w-full bg-[#232323] h-14 sm:h-20 md:h-28 -mt-1 relative" />
+        </div>
+      </footer>
     </div>
   );
 }
