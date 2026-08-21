@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { AuthModal } from "@/app/components/AuthModal";
 
 interface CheckResult {
   text: string;
@@ -69,6 +71,9 @@ function MiniRiskBadge({ score }: { score: number }) {
 export default function Home() {
   const [appMode, setAppMode] = useState<"personal" | "radar">("personal");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  const { user, displayName, loading: authLoading } = useAuth();
   
   const [activeTab, setActiveTab] = useState<"text" | "image">("text");
   const [language, setLanguage] = useState<"en" | "hi">("en");
@@ -221,54 +226,67 @@ export default function Home() {
             />
           </div>
 
-          {/* Simple Black & Beige Profile Logo with Down Arrow (No Outer Border) */}
+          {/* Auth-aware profile button & dropdown */}
           <div className="relative">
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setProfileMenuOpen((prev) => !prev);
+                if (!user) {
+                  setAuthModalOpen(true);
+                } else {
+                  setProfileMenuOpen((prev) => !prev);
+                }
               }}
               className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform p-0.5"
-              aria-label="Profile and Settings Menu"
+              aria-label={user ? "Profile and Settings Menu" : "Sign in or sign up"}
             >
-              {/* Simple Black & Beige Circular Avatar */}
+              {/* Avatar circle */}
               <div className="w-8 h-8 rounded-full bg-[#EDE8D0] flex items-center justify-center shadow-sm">
-                <svg className="w-4.5 h-4.5 text-[#232323]" viewBox="0 0 24 24" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
-                </svg>
+                {user ? (
+                  /* Logged-in: show initials */
+                  <span className="text-[#232323] text-xs font-bold leading-none select-none">
+                    {(displayName ?? user.email ?? "?").charAt(0).toUpperCase()}
+                  </span>
+                ) : (
+                  /* Logged-out: person icon */
+                  <svg className="w-4 h-4 text-[#232323]" viewBox="0 0 24 24" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                  </svg>
+                )}
               </div>
 
-              {/* Down Arrow Chevron */}
-              <svg
-                className={`w-3.5 h-3.5 transition-transform text-[#EDE8D0] ${profileMenuOpen ? "rotate-180" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-              </svg>
+              {/* Label or chevron */}
+              {!authLoading && !user ? (
+                <span className="text-[#EDE8D0] text-xs font-semibold hidden sm:inline">
+                  Sign In
+                </span>
+              ) : (
+                <svg
+                  className={`w-3.5 h-3.5 transition-transform text-[#EDE8D0] ${profileMenuOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                </svg>
+              )}
             </button>
 
-            {/* Profile & Settings Dropdown Menu (Aligned to Right) */}
-            {profileMenuOpen && (
+            {/* Logged-in dropdown */}
+            {user && profileMenuOpen && (
               <div
                 onClick={(e) => e.stopPropagation()}
                 className="absolute right-0 mt-2 w-56 bg-[#232323] border border-white/15 rounded-2xl shadow-2xl p-2 z-50 animate-fade-in backdrop-blur-lg"
               >
+                {/* Identity header */}
                 <div className="px-3 py-2 border-b border-white/10 mb-1">
-                  <p className="text-xs font-bold text-white">Shield Account</p>
-                  <p className="text-[11px] text-slate-400">user@scamshield.ai</p>
+                  <p className="text-xs font-bold text-white truncate">
+                    {displayName ?? "Shield Account"}
+                  </p>
+                  <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
                 </div>
+
                 <div className="space-y-0.5 text-xs text-slate-200 font-medium">
-                  <button
-                    onClick={() => {
-                      alert("Opening Settings...");
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors cursor-pointer"
-                  >
-                    <span>⚙️</span> Settings
-                  </button>
                   <button
                     onClick={() => {
                       setAppMode("radar");
@@ -278,30 +296,27 @@ export default function Home() {
                   >
                     <span>🛡️</span> My Circles
                   </button>
-                  <button
-                    onClick={() => {
-                      alert("Threat Notifications: Enabled");
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors cursor-pointer"
-                  >
-                    <span>🔔</span> Notifications
-                  </button>
-                  <button
-                    onClick={() => {
-                      alert("Preferences: AI Realtime Protection ON");
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-left transition-colors cursor-pointer"
-                  >
-                    <span>📊</span> Threat Preferences
-                  </button>
                 </div>
+
+                {/* Sign out */}
                 <div className="pt-1 mt-1 border-t border-white/10">
+                  {signOutError && (
+                    <div className="px-3 mb-2">
+                      <p className="text-[10px] text-red-400">{signOutError}</p>
+                    </div>
+                  )}
                   <button
-                    onClick={() => {
-                      alert("Signing out...");
-                      setProfileMenuOpen(false);
+                    onClick={async () => {
+                      setSignOutError(null);
+                      try {
+                        const { createClient } = await import("@/lib/supabase/client");
+                        const supabase = createClient();
+                        const { error } = await supabase.auth.signOut();
+                        if (error) throw error;
+                        setProfileMenuOpen(false);
+                      } catch (err: any) {
+                        setSignOutError(err.message || "Failed to sign out");
+                      }
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-red-500/20 text-red-400 text-xs font-semibold text-left transition-colors cursor-pointer"
                   >
@@ -336,7 +351,7 @@ export default function Home() {
         <div className="text-center -mb-12 sm:-mb-20 md:-mb-28 lg:-mb-36 select-none relative z-0 flex flex-col items-center">
           <h1 className="font-tall text-6xl sm:text-8xl md:text-9xl lg:text-[11rem] xl:text-[12.5rem] font-bold tracking-[0.12em] sm:tracking-[0.16em] text-[#232323]/65 uppercase flex flex-col items-center leading-[0.76] sm:leading-[0.78]">
             <span>SCAM</span>
-            <span>SHEILD</span>
+            <span>SHIELD</span>
           </h1>
         </div>
 
@@ -941,6 +956,11 @@ export default function Home() {
           <div className="w-full bg-[#232323] h-14 sm:h-20 md:h-28 -mt-1 relative" />
         </div>
       </footer>
+
+      {/* Auth modal — rendered as an overlay, outside all layout containers */}
+      {authModalOpen && (
+        <AuthModal onClose={() => setAuthModalOpen(false)} />
+      )}
     </div>
   );
 }
