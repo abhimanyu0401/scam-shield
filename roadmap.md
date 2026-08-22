@@ -28,7 +28,9 @@ Scam Shield is an AI tool that instantly checks any suspicious message, screensh
 ## 3. Finals Roadmap — Active Build (Weeks 1-2)
 
 ### Phase 9 — Real accounts & invite-only groups (Days 1-2, owner: Abhimanyu)
-Supabase (Postgres + auth). Email/password/display-name signup, no email-confirmation wait. Tables: `profiles` (id, display_name), `groups` (id, name, created_by, invite_code), `group_members` (group_id, user_id, role: admin/member, joined_at). Invite-link based joining, admin-revocable/regenerable codes. Personal Check stays fully login-free. Existing Redis reports layer kept as-is — real group UUIDs replace the two hardcoded circle-name strings. Admin can remove members and revoke invite links; any member can leave. Own branch (`feature/supabase-auth`) given the structural risk — this is the one phase allowed to touch routing/auth middleware.
+Supabase (Postgres + auth). Email/password/display-name signup, no email-confirmation wait. Tables: `profiles` (id, display_name), `groups` (id, name, created_by, invite_code), `group_members` (group_id, user_id, role: admin/member, joined_at). Invite-link based joining, admin-revocable/regenerable codes. Personal Check stays fully login-free. Existing Redis reports layer kept as-is — real group UUIDs replace the two hardcoded circle-name strings. Admin can remove members and revoke invite links; any member can leave. Own branch (`feature/supabase-auth` + `feature/circles-groups`) given the structural risk — this is the one phase allowed to touch routing/auth middleware.
+
+**Schema note:** `group_members` uses `(group_id, user_id)` as its **primary key**, which enforces membership uniqueness at the storage layer. A separately-named unique constraint on the same two columns is redundant if present — harmless, just unnecessary. The client-side `23505` error handler in `handleJoinGroup` catches this primary key violation directly; no additional constraint is needed.
 
 **Key format note:** this project uses Supabase's newer publishable/secret key system (`sb_publishable_...`), not the legacy anon/service_role JWT keys — the legacy format is being deprecated. Use the Publishable key client-side; the Secret key isn't needed for basic auth, only for later privileged server-side operations. Get exact env var names from the project's "Connect" dialog rather than assuming — this has tripped up naming before (Redis, Gemini SDK) and Supabase's key system changed recently enough that older documentation/training data may reference the old anon-key pattern.
 
@@ -73,24 +75,26 @@ Live-URL sanity check, rest before demo day.
 
 ### ⚠️ Checklist — before starting any phase
 - [ ] `git checkout main && git pull` — never branch from a stale local copy
+- [ ] Check `STATUS.md` — see what's currently in progress and by whom before you start
 - [ ] Confirm the correct branch name for your phase (table below)
 - [ ] Give the Antigravity agent `roadmap.md` for context, use Planning Mode, read its plan before approving
 - [ ] Test locally before committing — this habit has caught a real bug in nearly every phase of this build
 - [ ] Push and open a PR — direct pushes to `main` are blocked
 - [ ] Get it approved by someone else before merging
-- [ ] After merging, tell the team so everyone pulls `main` before continuing
+- [ ] Update `STATUS.md` as part of your PR (move your row to "Done & Merged," add anything future work should know) — then tell the team so everyone pulls `main` before continuing
 
-**Claude repeats this checklist at the top of every phase prompt from here on** — a standing reminder, not a one-time read.
+**Claude repeats this checklist, including the STATUS.md step, at the top of every phase prompt from here on.**
 
 ### Branches — current status and dependencies
 
 | Branch | Phase | Owner | Status |
 |---|---|---|---|
-| `feature/supabase-auth` | 9 | Abhimanyu | **Start now** — foundational, everything else depends on this |
+| `feature/supabase-auth` | 9 (auth) | Abhimanyu | ✅ Merged |
+| `feature/circles-groups` | 9 (groups/invites) | Abhimanyu | ✅ Merged |
 | `feature/audio-input` | 10 | Sneha | **Start now** — independent of auth |
 | `feature/rate-limiting` | 12 (backend) | Sneha/Abhimanyu | **Start now** — independent |
 | `feature/accessibility-ui` | 12 (frontend) | Abhash | **Start now** — independent, pure frontend/copy work |
-| `feature/community-confirmations` | 11 | Abhimanyu | **Wait** — needs real user identity from Phase 9. Do not branch until `feature/supabase-auth` has merged into `main`. |
+| `feature/community-confirmations` | 11 | Abhimanyu | **Ready to start** — Phase 9 (auth + groups) fully merged |
 
 **`page.tsx` conflict warning:** audio input, the verdict banner, and accessibility work all touch this file. Even building in parallel, merge these branches one at a time and pull `main` between each — don't leave all four open and diverging for days at once.
 
