@@ -8,7 +8,6 @@ _Update this when you start, pause, or finish a session — and always as part o
 
 | Phase | Feature | Owner | Branch | Status |
 |---|---|---|---|---|
-| 10 | Voice/audio input | Sneha | `feature/audio-input` | Starting |
 | 11 | Named community confirmations | Abhimanyu | `feature/community-confirmations` | Ready to start — Phase 9 schema fully merged |
 
 ## ✅ Done & Merged
@@ -16,6 +15,7 @@ _Update this when you start, pause, or finish a session — and always as part o
 - Phases 1-8 (see `roadmap.md` Section 2 for full detail)
 - Phase 9a: Supabase auth foundation (`feature/supabase-auth`, merged)
 - Phase 9b: Groups & invite-only circles (`feature/circles-groups`, merged) — invite-code display, state-leak on auth transitions, auth-gated Radar view, permanent join/create entry points, state consolidated into `useGroups` hook
+- Phase 10: Voice/audio input v1 (`feature/audio-input`, merged) — v1 audio transcription: file upload only (.mp3, .wav, .m4a, .ogg, .webm, .aac; in-browser recording deferred to buffer days), generic flags only (audio-specific cadence/phrasing flags deferred)
 
 ## ⏳ Waiting / Blocked
 
@@ -26,7 +26,8 @@ _Update this when you start, pause, or finish a session — and always as part o
 
 _Add a line here if you hit something that affects shared code — `page.tsx` especially, since Phases 10, 11, and 12 all touch it. Remove the line once it's resolved._
 
-- (none currently)
+- Phase 10 v1 limitation: Audio detection quality depends entirely on Gemini transcription with no fallback on noisy/accented/compressed audio (not yet stress-tested beyond dev clips)
+- Phase 10 prompt note: `NOT_A_CALL` guard is strictly topic-blind to avoid false-rejecting clean non-scam speech; keep speech detection separated from scam judging in any future prompt edits
 
 ## How to use this file
 

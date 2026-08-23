@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useGroups } from '@/hooks/useGroups';
 import { AuthModal } from "@/app/components/AuthModal";
+import { AudioInput } from "@/app/components/AudioInput";
 
 interface CheckResult {
   text: string;
@@ -76,12 +77,13 @@ export default function Home() {
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const { user, displayName, loading: authLoading } = useAuth();
   
-  const [activeTab, setActiveTab] = useState<"text" | "image">("text");
+  const [activeTab, setActiveTab] = useState<"text" | "image" | "audio">("text");
   const [language, setLanguage] = useState<"en" | "hi">("en");
   
   const [text, setText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [audioData, setAudioData] = useState<{ base64: string; mimeType: string; fileName?: string } | null>(null);
   
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
@@ -151,6 +153,7 @@ export default function Home() {
   async function handleCheck() {
     if (activeTab === "text" && !text.trim()) return;
     if (activeTab === "image" && !imageFile) return;
+    if (activeTab === "audio" && !audioData) return;
 
     setLoading(true);
     setResult(null);
@@ -168,6 +171,12 @@ export default function Home() {
         payload = {
           imageBase64: base64Data,
           mimeType: imageFile.type,
+          language,
+        };
+      } else if (activeTab === "audio" && audioData) {
+        payload = {
+          audioBase64: audioData.base64,
+          mimeType: audioData.mimeType,
           language,
         };
       }
@@ -565,10 +574,10 @@ export default function Home() {
             {/* Input card */}
             <div className="rounded-3xl border border-black/10 bg-[#232323] text-white p-6 sm:p-8 shadow-2xl mb-8">
               {/* Tabs */}
-              <div className="flex gap-2 mb-6 border-b border-white/10 pb-4">
+              <div className="flex gap-2 mb-6 border-b border-white/10 pb-4 overflow-x-auto">
                 <button
                   onClick={() => setActiveTab("text")}
-                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === "text"
                       ? "bg-[#7CB8F2] text-[#0f172a] shadow-sm"
                       : "text-slate-400 hover:bg-white/10 hover:text-slate-100"
@@ -578,13 +587,23 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => setActiveTab("image")}
-                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === "image"
                       ? "bg-[#7CB8F2] text-[#0f172a] shadow-sm"
                       : "text-slate-400 hover:bg-white/10 hover:text-slate-100"
                   }`}
                 >
                   Upload Screenshot
+                </button>
+                <button
+                  onClick={() => setActiveTab("audio")}
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === "audio"
+                      ? "bg-[#7CB8F2] text-[#0f172a] shadow-sm"
+                      : "text-slate-400 hover:bg-white/10 hover:text-slate-100"
+                  }`}
+                >
+                  Upload Audio
                 </button>
               </div>
 
@@ -605,7 +624,7 @@ export default function Home() {
                     className="w-full rounded-2xl bg-[#181818] border border-white/15 text-slate-100 placeholder-slate-400 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7CB8F2] resize-none transition"
                   />
                 </div>
-              ) : (
+              ) : activeTab === "image" ? (
                 <div>
                   <label className="block text-sm font-semibold text-slate-200 mb-3">
                     Suspicious screenshot
@@ -630,6 +649,11 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+              ) : (
+                <AudioInput
+                  onAudioReady={(data) => setAudioData(data)}
+                  onError={(err) => setError(err)}
+                />
               )}
 
               {/* Language toggle */}
@@ -664,7 +688,14 @@ export default function Home() {
               <button
                 id="check-button"
                 onClick={handleCheck}
-                disabled={loading || (activeTab === "text" ? !text.trim() : !imageFile)}
+                disabled={
+                  loading ||
+                  (activeTab === "text"
+                    ? !text.trim()
+                    : activeTab === "image"
+                    ? !imageFile
+                    : !audioData)
+                }
                 className="mt-6 w-full py-3.5 rounded-2xl font-bold text-sm tracking-wide transition-all
                   bg-gradient-to-r from-[#7CB8F2] via-[#5A97D9] to-[#31487A] text-white hover:opacity-95
                   disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer
