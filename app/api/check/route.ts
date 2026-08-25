@@ -42,10 +42,10 @@ export async function POST(req: NextRequest) {
 
     if (body.audioBase64 && body.mimeType) {
       // --- Audio Phase ---
-      // Check payload size (~4MB binary is ~5.5MB in base64)
-      if (typeof body.audioBase64 === "string" && body.audioBase64.length > 6 * 1024 * 1024) {
+      // Check payload size (~2.5MB binary is ~3.33MB in base64, safe under Vercel's 4.5MB limit)
+      if (typeof body.audioBase64 === "string" && body.audioBase64.length > 3.8 * 1024 * 1024) {
         return NextResponse.json(
-          { error: "Audio file too large. Please keep it under 4MB." },
+          { error: "Audio file too large. Please keep it under 2.5MB." },
           { status: 413 }
         );
       }
@@ -82,6 +82,14 @@ export async function POST(req: NextRequest) {
       textToAnalyze = cleanAudioText;
     } else if (body.imageBase64 && body.mimeType) {
       // --- Image OCR Phase ---
+      // Check payload size (~2.5MB binary is ~3.33MB in base64, safe under Vercel's 4.5MB limit)
+      if (typeof body.imageBase64 === "string" && body.imageBase64.length > 3.8 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: "Image file too large. Please keep it under 2.5MB." },
+          { status: 413 }
+        );
+      }
+
       const ocrResponse = await ai.models.generateContent({
         model: "gemini-3.5-flash",
         contents: [

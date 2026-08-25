@@ -138,6 +138,16 @@ export default function Home() {
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 2.5 * 1024 * 1024) {
+        setError(`Image file too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed size is 2.5MB.`);
+        setImageFile(null);
+        setImagePreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        return;
+      }
+      setError(null);
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -644,7 +654,7 @@ export default function Home() {
                       {imageFile ? (
                         <span className="text-[#7CB8F2] font-semibold">{imageFile.name}</span>
                       ) : (
-                        <span>Click to browse or drag a screenshot here</span>
+                        <span>Click to browse or drag a screenshot here (Max 2.5MB)</span>
                       )}
                     </div>
                   </div>

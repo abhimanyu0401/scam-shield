@@ -7,7 +7,7 @@ interface AudioInputProps {
   onError?: (errorMessage: string | null) => void;
 }
 
-const MAX_AUDIO_SIZE_BYTES = 4 * 1024 * 1024; // 4MB
+const MAX_AUDIO_SIZE_BYTES = 2.5 * 1024 * 1024; // 2.5MB (safely under Vercel 4.5MB payload limit after base64 expansion)
 
 const ALLOWED_EXTENSIONS = ["mp3", "mpeg", "wav", "m4a", "ogg", "webm", "aac", "flac"];
 
@@ -44,14 +44,14 @@ export function AudioInput({ onAudioReady, onError }: AudioInputProps) {
     if (!file) return;
 
     if (!isValidAudioFile(file)) {
-      const errMsg = "Please select a valid audio file (.mp3, .wav, .m4a, .ogg, .webm, .aac).";
+      const errMsg = "Please select a valid audio file (.mp3, .wav, .m4a, .ogg, .webm, .aac, .flac).";
       setError(errMsg);
       onError?.(errMsg);
       return;
     }
 
     if (file.size > MAX_AUDIO_SIZE_BYTES) {
-      const errMsg = `Audio file too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please keep it under 4MB.`;
+      const errMsg = `Audio file too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed size is 2.5MB.`;
       setError(errMsg);
       onError?.(errMsg);
       return;
@@ -154,7 +154,7 @@ export function AudioInput({ onAudioReady, onError }: AudioInputProps) {
           <div className="flex flex-col items-center justify-center gap-1.5 text-slate-300 text-sm">
             <span className="text-2xl mb-1">🎙️</span>
             <span>Click to browse or drag a voice note / call audio here</span>
-            <span className="text-xs text-slate-400">Supported: MP3, WAV, M4A, OGG, WEBM (Max 4MB)</span>
+            <span className="text-xs text-slate-400">Supported: MP3, WAV, M4A, OGG, WEBM, AAC (Max 2.5MB)</span>
           </div>
         )}
       </div>
