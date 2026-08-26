@@ -8,6 +8,9 @@ _Update this when you start, pause, or finish a session — and always as part o
 
 | Phase | Feature | Owner | Branch | Status |
 |---|---|---|---|---|
+| 10 | Audio-specific flags (cadence/phrasing) | Sneha | `feature/audio-specific-flags` | Ready to merge — Step 2 delivery reasoning & prompt guardrails complete |
+| Fix | Regex word-boundary keyword matching | Sneha | `fix/regex-word-boundary` | Ready to merge — isolated keyword word-boundary fix |
+| 10 | In-browser live recording | Sneha/Abhash | `feature/live-recording` | Ready to start — depends on merged audio branches |
 | 11 | Named community confirmations | Abhimanyu | `feature/community-confirmations` | Ready to start — Phase 9 schema fully merged |
 
 ## ✅ Done & Merged
@@ -28,6 +31,7 @@ _Add a line here if you hit something that affects shared code — `page.tsx` es
 
 - Phase 10 v1 limitation: Audio detection quality depends entirely on Gemini transcription with no fallback on noisy/accented/compressed audio (not yet stress-tested beyond dev clips)
 - Phase 10 prompt note: `NOT_A_CALL` guard is strictly topic-blind to avoid false-rejecting clean non-scam speech; keep speech detection separated from scam judging in any future prompt edits
+- Phase 10 model/quota handoff note: The audio feature currently runs on a fixed Gemini model identifier (`gemini-3.5-flash`) that is expected to change once the multi-provider key-switching architecture (in progress separately) lands. `route.ts`'s hardcoded model strings across all three Gemini calls (transcription, OCR, reasoning) will need to be revisited then. The `investigate/model-version` branch documents that the current preview model has a 20 RPD ceiling on free tier and outlines the GA vs. preview model distinction as input for that work.
 
 ## How to use this file
 
