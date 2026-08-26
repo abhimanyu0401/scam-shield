@@ -7,6 +7,7 @@ import { AuthModal } from "@/app/components/AuthModal";
 import { AudioInput } from "@/app/components/AudioInput";
 
 interface CheckResult {
+  analysisId?: string;
   text: string;
   riskScore: number;
   flags: string[];
@@ -212,18 +213,14 @@ export default function Home() {
   }
 
   async function handleReport() {
-    if (!result) return;
+    if (!result || !result.analysisId || !reportCircleId) return;
     setReportStatus("loading");
     try {
       const res = await fetch(`/api/circles/${reportCircleId}/report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: result.text,
-          riskScore: result.riskScore,
-          flags: result.flags,
-          explanation: result.explanation,
-          embedding: result.embedding,
+          analysisId: result.analysisId,
         }),
       });
 
@@ -238,6 +235,11 @@ export default function Home() {
   }
 
   async function fetchFeed() {
+    if (!selectedCircle) {
+      setFeedReports([]);
+      setFeedLoading(false);
+      return;
+    }
     setFeedLoading(true);
     setFeedError(null);
     try {
@@ -256,8 +258,10 @@ export default function Home() {
 
   // Fetch feed when switching to radar mode or changing circle
   useEffect(() => {
-    if (appMode === "radar") {
+    if (appMode === "radar" && selectedCircle) {
       fetchFeed();
+    } else if (appMode === "radar" && !selectedCircle) {
+      setFeedReports([]);
     }
   }, [appMode, selectedCircle]);
 
