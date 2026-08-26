@@ -46,8 +46,56 @@ export async function POST(req: NextRequest) {
 
     let textToAnalyze = "";
 
-    if (body.imageBase64 && body.mimeType) {
+    if (body.audioBase64 && body.mimeType) {
+      // --- Audio Phase ---
+      // Check payload size (~2.5MB binary is ~3.33MB in base64, safe under Vercel's 4.5MB limit)
+      if (typeof body.audioBase64 === "string" && body.audioBase64.length > 3.8 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: "Audio file too large. Please keep it under 2.5MB." },
+          { status: 413 }
+        );
+      }
+
+      const audioResponse = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: [
+          {
+            inlineData: {
+              mimeType: body.mimeType,
+              data: body.audioBase64,
+            },
+          },
+          {
+            text: "Transcribe the spoken content of this audio accurately and completely. Do not judge or filter based on topic — transcribe any clear human speech regardless of subject matter, length, or whether it seems scam-related. If there is no discernible speech at all — for example silence, instrumental music with no vocals, or unintelligible noise — output EXACTLY the word: NO_SPEECH_DETECTED. Only if the audio is unambiguously not a voice recording at all — for example pure background/ambient noise, a sound effect, or music — respond with exactly NOT_A_CALL instead of transcribing. Any audio containing actual spoken words, on any topic, should be transcribed normally.",
+          },
+        ],
+      });
+
+      const cleanAudioText = (audioResponse.text || "").trim();
+      if (cleanAudioText.includes("NOT_A_CALL")) {
+        return NextResponse.json(
+          { error: "This doesn't look like a voice note or call recording. Try uploading a suspicious voice message or call excerpt." },
+          { status: 400 }
+        );
+      }
+      if (!cleanAudioText || cleanAudioText.includes("NO_SPEECH_DETECTED") || cleanAudioText.includes("NO_SPEECH_FOUND") || cleanAudioText.length < 3) {
+        return NextResponse.json(
+          { error: "No readable speech was detected in this audio. Try a clearer voice note or call recording." },
+          { status: 400 }
+        );
+      }
+
+      textToAnalyze = cleanAudioText;
+    } else if (body.imageBase64 && body.mimeType) {
       // --- Image OCR Phase ---
+      // Check payload size (~2.5MB binary is ~3.33MB in base64, safe under Vercel's 4.5MB limit)
+      if (typeof body.imageBase64 === "string" && body.imageBase64.length > 3.8 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: "Image file too large. Please keep it under 2.5MB." },
+          { status: 413 }
+        );
+      }
+
       const ocrResponse = await ai.models.generateContent({
         model: "gemini-3.5-flash",
         contents: [
@@ -84,7 +132,7 @@ export async function POST(req: NextRequest) {
       textToAnalyze = body.text;
     } else {
       return NextResponse.json(
-        { error: "Missing 'text' or 'imageBase64' field in request body." },
+        { error: "Missing 'text', 'imageBase64', or 'audioBase64' field in request body." },
         { status: 400 }
       );
     }
