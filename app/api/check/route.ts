@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
+import { Redis } from "@upstash/redis";
 import * as fs from "fs";
 import * as path from "path";
+
+const redis = new Redis({
+  url: process.env.REDIS_KV_REST_API_URL!,
+  token: process.env.REDIS_KV_REST_API_TOKEN!,
+});
 
 // Initialize Gemini client using the key from .env.local
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -382,7 +388,27 @@ ${text}
       financialLossLikely: aiResult.financialLossLikely === true,
     };
 
-    return NextResponse.json(finalResponse);
+    const analysisId = crypto.randomUUID();
+
+    // Cache verified analysis in Redis for community reporting (15 min TTL = 900s)
+    try {
+      const analysisData = {
+        text: finalResponse.text,
+        riskScore: finalResponse.riskScore,
+        flags: finalResponse.flags,
+        explanation: finalResponse.explanation,
+        embedding: finalResponse.embedding,
+        analyzedAt: new Date().toISOString(),
+      };
+      await redis.set(`analysis:${analysisId}`, JSON.stringify(analysisData), { ex: 900 });
+    } catch (redisErr) {
+      console.warn("Failed to cache analysis in Redis:", redisErr);
+    }
+
+    return NextResponse.json({
+      ...finalResponse,
+      analysisId,
+    });
   } catch (error: unknown) {
     console.error("Scam check error:", error);
     return NextResponse.json(

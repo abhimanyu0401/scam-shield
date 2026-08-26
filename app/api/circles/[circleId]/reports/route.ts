@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Redis } from '@upstash/redis';
+import { Redis } from "@upstash/redis";
+import { verifyCircleMembership } from "@/lib/auth/verify-circle-membership";
 
 const redis = new Redis({
   url: process.env.REDIS_KV_REST_API_URL!,
@@ -13,10 +14,17 @@ export async function GET(
   try {
     const { circleId } = await params;
 
+    // 1. Authenticate user and verify circle membership
+    const auth = await verifyCircleMembership(circleId);
+    if (!auth.success) {
+      return auth.errorResponse;
+    }
+
+    // 2. Fetch reports for the authorized circle from Redis
     let existingReports: any[] = [];
     try {
-      const rawData = await redis.lrange(`circle:${circleId}`, 0, -1);
-      existingReports = rawData.map((item: any) => 
+      const rawData = await redis.lrange(`circle:${auth.circleId}`, 0, -1);
+      existingReports = rawData.map((item: any) =>
         typeof item === "string" ? JSON.parse(item) : item
       );
     } catch (err: any) {
@@ -25,25 +33,36 @@ export async function GET(
 
     const circleReports = existingReports;
 
-    // Calculate cluster counts
+    // 3. Calculate cluster counts
     const clusterCounts: Record<string, number> = {};
     for (const report of circleReports) {
-      clusterCounts[report.clusterId] = (clusterCounts[report.clusterId] || 0) + 1;
+      if (report.clusterId) {
+        clusterCounts[report.clusterId] = (clusterCounts[report.clusterId] || 0) + 1;
+      }
     }
 
-    // Add clusterCount and remove embedding from response to save bandwidth
-    const responseReports = circleReports.map(report => ({
-      ...report,
-      embedding: undefined, // remove before sending
-      clusterCount: clusterCounts[report.clusterId] || 1
+    // 4. Add clusterCount and strip raw embedding before sending response
+    const responseReports = circleReports.map((report) => ({
+      id: report.id,
+      circleId: report.circleId,
+      clusterId: report.clusterId,
+      text: report.text,
+      riskScore: report.riskScore,
+      flags: report.flags,
+      explanation: report.explanation,
+      timestamp: report.timestamp,
+      clusterCount: clusterCounts[report.clusterId] || 1,
     }));
 
-    // Sort by timestamp descending
-    responseReports.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // 5. Sort by timestamp descending
+    responseReports.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
 
     return NextResponse.json({ reports: responseReports });
   } catch (error: any) {
     console.error("Error fetching reports:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to load reports" }, { status: 500 });
   }
 }
+
