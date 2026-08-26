@@ -30,6 +30,27 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
+// Normalizes audio MIME types for Gemini API compatibility
+function normalizeAudioMimeType(mime: string): string {
+  const clean = mime.toLowerCase().trim();
+  const map: Record<string, string> = {
+    "audio/mp3": "audio/mp3",
+    "audio/mpeg": "audio/mp3",
+    "audio/wav": "audio/wav",
+    "audio/x-wav": "audio/wav",
+    "audio/ogg": "audio/ogg",
+    "audio/opus": "audio/ogg",
+    "audio/webm": "audio/webm",
+    "audio/aac": "audio/aac",
+    "audio/m4a": "audio/aac",
+    "audio/x-m4a": "audio/aac",
+    "audio/mp4": "audio/mp4",
+    "audio/flac": "audio/flac",
+    "audio/x-flac": "audio/flac",
+  };
+  return map[clean] || clean;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -39,6 +60,7 @@ export async function POST(req: NextRequest) {
     const languageLabel = language === "hi" ? "Hindi" : "English";
 
     let textToAnalyze = "";
+    let audioDataForReasoning: { data: string; mimeType: string } | null = null;
 
     if (body.audioBase64 && body.mimeType) {
       // --- Audio Phase ---
@@ -50,12 +72,19 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      const normalizedMimeType = normalizeAudioMimeType(body.mimeType);
+
+      audioDataForReasoning = {
+        data: body.audioBase64,
+        mimeType: normalizedMimeType,
+      };
+
       const audioResponse = await ai.models.generateContent({
         model: "gemini-3.5-flash",
         contents: [
           {
             inlineData: {
-              mimeType: body.mimeType,
+              mimeType: normalizedMimeType,
               data: body.audioBase64,
             },
           },
@@ -235,6 +264,23 @@ export async function POST(req: NextRequest) {
 
     // Promise 3: Gemini AI Call
     const geminiPromise = (async () => {
+      const audioGuidance = audioDataForReasoning
+        ? `
+AUDIO ANALYSIS INSTRUCTIONS:
+The attached audio is provided alongside the transcript above. In addition to analyzing the spoken words, evaluate the delivery, tone, cadence, and acoustic characteristics of the speech:
+
+1. Audio-Specific Flags Vocabulary:
+   - "Scripted or robotic delivery": The speaker sounds unnaturally mechanical, monotone, reading from a rigid script without natural human inflections, or exhibits artificial cadence.
+   - "Generic call-center ambience": Background sounds characteristic of a call-center environment — overlapping call chatter, hold-queue noise, headset audio quality — rather than a single person's normal calling environment.
+   - "Delivery inconsistent with message urgency": Specifically when the tone is flat, calm, or disengaged while the words describe severe/urgent consequences (e.g. claiming imminent arrest or account freeze in a routine, unemotional, or clearly prerecorded manner). Do not flag the reverse — a genuinely distressed or emotional speaker describing a real problem is not itself suspicious.
+
+2. Guardrails (Strict):
+   - Do NOT flag accent, non-native pronunciation, regional speech patterns, or speech impediments as robotic or scripted.
+   - Do NOT attempt to identify, verify, or describe who the speaker is — no voice-biometric or speaker-identity judgments, only delivery characteristics of the speech itself.
+   - Legitimate automated systems (bank IVR, appointment reminders) can sound robotic without being scams — treat delivery as one signal among several feeding the overall score, not a standalone verdict, and avoid flagging clearly-labeled automated/IVR systems just for sounding automated.
+`
+        : "";
+
       const prompt = `Analyze the following message for scam patterns.
 Return a JSON object with EXACTLY the following structure:
 {
@@ -254,7 +300,7 @@ Recommended Action: [one sentence on what the recipient should do next]"
 
 If riskScore is below 75, return an empty string for this field. Extract entities only from what is literally present in the message — do not invent or guess.)
 }
-
+${audioGuidance}
 IMPORTANT: Write the "explanation" field in ${languageLabel}. Keep all "flags" array values in English. Write "complaintDraft" in English regardless of language setting.
 
 Message to analyze:
@@ -264,9 +310,23 @@ ${text}
 `;
 
       try {
+        const geminiContents = audioDataForReasoning
+          ? [
+              {
+                inlineData: {
+                  mimeType: audioDataForReasoning.mimeType,
+                  data: audioDataForReasoning.data,
+                },
+              },
+              {
+                text: prompt,
+              },
+            ]
+          : prompt;
+
         const response = await ai.models.generateContent({
           model: "gemini-3.5-flash",
-          contents: prompt,
+          contents: geminiContents,
           config: {
             responseMimeType: "application/json",
             responseSchema: {
