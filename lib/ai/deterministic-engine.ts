@@ -153,7 +153,7 @@ const KYC_STRONG = [
   "verify your kyc", "link your pan", "avoid account suspension", "avoid block"
 ];
 const KYC_STRONG_DEV = ["केवाईसी", "खाता बंद", "पैन आधार", "अकाउंट ब्लॉक"];
-const KYC_MODERATE = ["kyc", "pan aadhaar", "aadhaar link", "bank", "sbi", "hdfc", "icici", "axis", "verify", "pan card", "baink", "बैंक"];
+const KYC_MODERATE = ["kyc", "pan aadhaar", "aadhaar link", "bank", "sbi", "hdfc", "icici", "axis", "verify", "pan card", "baink", "बैंक", "खाता"];
 
 const UPI_STRONG = [
   "approve collect request", "enter upi pin to receive", "scan qr to receive money",
@@ -161,8 +161,8 @@ const UPI_STRONG = [
   "pin enter to receive", "pin daal", "receive money enter pin", "scan qr code",
   "approve request to receive", "upi pin enter"
 ];
-const UPI_STRONG_DEV = ["पिन डालें", "क्यूआर कोड", "कलेक्ट रिक्वेस्ट"];
-const UPI_MODERATE = ["phonepe", "gpay", "paytm", "upi", "collect request", "refund", "pin", "पेटीएम", "यूपीआई"];
+const UPI_STRONG_DEV = ["पिन डालें", "क्यूआर कोड", "कलेक्ट रिक्वेस्ट", "पिन दर्ज करें"];
+const UPI_MODERATE = ["phonepe", "gpay", "paytm", "upi", "collect request", "refund", "pin", "पेटीएम", "यूपीआई", "पिन"];
 
 const ARREST_STRONG = [
   "cbi", "customs department", "enforcement directorate", "narcotics", "digital arrest",
@@ -174,8 +174,8 @@ const ARREST_STRONG_DEV = ["डिजिटल अरेस्ट", "मनी �
 const ARREST_MODERATE = ["police officer", "fir", "arrested", "parcel with drugs", "passport", "seal", "giraftari", "girftari", "police", "jail", "arrest", "मामला", "केस"];
 
 const UTILITY_WORDS = ["electricity", "bijli", "bijlee", "power", "gas", "lpg", "water", "बिजली"];
-const DISCONNECT_WORDS = ["disconnect", "cut", "band", "kat", "discontinued", "कट जाएगा", "कट जाएगी", "बंद हो"];
-const UTILITY_DEMAND = ["call", "pay", "link", "contact", "update", "number", "officer"];
+const DISCONNECT_WORDS = ["disconnect", "disconnected", "disconnection", "cut", "band", "kat", "discontinued", "कट जाएगा", "कट जाएगी", "काट दिया जाएगा", "बंद हो"];
+const UTILITY_DEMAND = ["call", "pay", "link", "contact", "update", "number", "officer", "कॉल", "संपर्क"];
 
 const INVEST_STRONG = [
   "guaranteed return", "guaranteed profit", "300% monthly", "upper circuit stocks",
@@ -238,10 +238,16 @@ const BASE_MATRIX: Record<ScamCategory, { strong: number; urgency: number; link:
   BENIGN:               { strong: 0, urgency: 0, link: 0, both: 0 },
 };
 
+// Word-boundary Regex Helper with Unicode script support (\p{L}\p{M}\p{N})
+export function buildWordBoundaryRegex(word: string): RegExp {
+  const esc = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}\\p{M}\\p{N}])${esc}(?![\\p{L}\\p{M}\\p{N}])`, "iu");
+}
+
 // Pattern Matcher Helper
 function matchPattern(text: string, lowerText: string, substrings: readonly string[], regexes?: readonly RegExp[]): boolean {
   for (const sub of substrings) {
-    if (lowerText.includes(sub)) return true;
+    if (buildWordBoundaryRegex(sub).test(lowerText)) return true;
   }
   if (regexes) {
     for (const rx of regexes) {
@@ -347,21 +353,21 @@ function runCategoryDetection(text: string, lowerText: string): DetectedSignal[]
   const signals: DetectedSignal[] = [];
 
   // Helper matching predicates for combinations:
-  const matchWords = (words: string[]) => words.some(w => lowerText.includes(w));
+  const matchWords = (words: string[]) => words.some(w => buildWordBoundaryRegex(w).test(text));
 
   // lowerTextNoUrls: lowerText with URL substrings removed.
   // Used only for MODERATE-tier keyword checks to prevent URL domain components
   // (e.g. "sbi" in "https://sbi.co.in") from falsely triggering bank/KYC signals.
   // Strong-tier regex detection, which requires co-occurring action verbs, uses full text.
   const lowerTextNoUrls = lowerText.replace(/(https?:\/\/[^\s]+|www\.[^\s]+)/gi, " ");
-  const matchWordsMod = (words: string[]) => words.some(w => lowerTextNoUrls.includes(w));
+  const matchWordsMod = (words: string[]) => words.some(w => buildWordBoundaryRegex(w).test(lowerTextNoUrls));
   
   // 1. OTP_CREDENTIAL_THEFT
   // Regex pattern matching: request verb + OTP word
-  const otpRequestRegex = /(send|share|give|tell|forward|batao|bata|bhejo|bhej|dedo|daalo|dalo|snd|shar|bta|btao|bheje|enter|submit|daal|put|input|do|de)[\s\S]{0,60}?(otp|one\s*time\s*password|verification|code|pin|password|passcode|otpp|ओटीपी|पासवर्ड)/i;
+  const otpRequestRegex = /(?<![\p{L}\p{M}\p{N}])(send|share|give|tell|forward|batao|bata|bhejo|bhej|dedo|daalo|dalo|snd|shar|bta|btao|bheje|enter|submit|daal|put|input|do|de)(?![\p{L}\p{M}\p{N}])[\s\S]{0,60}?(?<![\p{L}\p{M}\p{N}])(otp|one\s*time\s*password|verification|code|pin|password|passcode|otpp|ओटीपी|पासवर्ड)(?![\p{L}\p{M}\p{N}])/iu;
   // otpRequestRegex2: OTP word first, then outbound request verb — constrained gap (≤80 chars) to avoid
   // matching benign delivery messages like "Your OTP is 482910. Do not share with anyone."
-  const otpRequestRegex2 = /(otp|one\s*time\s*password|verification|code|pin|password|passcode|otpp|ओटीपी|पासवर्ड)[\s\S]{0,80}?(send|share|give|tell|forward|batao|bata|bhejo|bhej|dedo|daalo|dalo|bta|btao|bheje|submit|daal|dena|karo)[\s\S]{0,30}?(me|mujhe|mujh|to me|mujhe|हमें|मुझे)/i;
+  const otpRequestRegex2 = /(?<![\p{L}\p{M}\p{N}])(otp|one\s*time\s*password|verification|code|pin|password|passcode|otpp|ओटीपी|पासवर्ड)(?![\p{L}\p{M}\p{N}])[\s\S]{0,80}?(?<![\p{L}\p{M}\p{N}])(send|share|give|tell|forward|batao|bata|bhejo|bhej|dedo|daalo|dalo|bta|btao|bheje|submit|daal|dena|karo)(?![\p{L}\p{M}\p{N}])[\s\S]{0,30}?(?<![\p{L}\p{M}\p{N}])(me|mujhe|mujh|to me|mujhe|हमें|मुझे)(?![\p{L}\p{M}\p{N}])/iu;
 
   // Benign OTP delivery: message contains actual OTP digits + delivery phrasing — exclude from strong
   const looksLikeOtpDelivery = /\b\d{4,8}\b/.test(text) &&
@@ -385,7 +391,7 @@ function runCategoryDetection(text: string, lowerText: string): DetectedSignal[]
   }
 
   // 2. BANK_KYC_PHISHING
-  const kycReqRegex = /(kyc|pan|aadhaar|pan-aadhaar|account|card|sbi|hdfc|icici|axis|baink|bank|खाता|बैंक|paytm)[\s\S]*?(update|verify|link|block|suspend|band|pending|suspend|deactivate|verify|vrify|verif|blocked|suspension)/i;
+  const kycReqRegex = /(?<![\p{L}\p{M}\p{N}])(kyc|pan|aadhaar|pan-aadhaar|account|card|sbi|hdfc|icici|axis|baink|bank|खाता|बैंक|paytm)(?![\p{L}\p{M}\p{N}])[\s\S]*?(?<![\p{L}\p{M}\p{N}])(update|verify|link|block|suspend|band|pending|deactivate|vrify|verif|blocked|suspension)(?![\p{L}\p{M}\p{N}])/iu;
   const hasKycStrong = kycReqRegex.test(text) || matchPattern(text, lowerText, KYC_STRONG.concat(KYC_STRONG_DEV));
   const hasKycMod = matchPattern(text, lowerTextNoUrls, KYC_MODERATE);
   
@@ -396,7 +402,7 @@ function runCategoryDetection(text: string, lowerText: string): DetectedSignal[]
   }
 
   // 3. UPI_PAYMENT_FRAUD
-  const upiReqRegex = /(pin|upi|collect|refund|paytm|phonepe|gpay|qr|receive|money|approve)[\s\S]*?(enter|approve|scan|receive|refund|collect|daal|put|approve collect|collect request|daal|dalo)/i;
+  const upiReqRegex = /(?<![\p{L}\p{M}\p{N}])(pin|upi|collect|refund|paytm|phonepe|gpay|qr|receive|money|approve)(?![\p{L}\p{M}\p{N}])[\s\S]*?(?<![\p{L}\p{M}\p{N}])(enter|approve|scan|receive|refund|collect|daal|put|approve collect|collect request|dalo)(?![\p{L}\p{M}\p{N}])/iu;
   const hasUpiStrong = upiReqRegex.test(text) || matchPattern(text, lowerText, UPI_STRONG.concat(UPI_STRONG_DEV));
   const hasUpiMod = matchPattern(text, lowerTextNoUrls, UPI_MODERATE);
   
@@ -407,7 +413,7 @@ function runCategoryDetection(text: string, lowerText: string): DetectedSignal[]
   }
 
   // 4. DIGITAL_ARREST_POLICE
-  const policeReqRegex = /(cbi|police|customs|narcotics|officer|arrest|giraftari|girftari|fir|laundering|jail|case|cyber|commissioner)[\s\S]*?(arrest|fir|disconnect|jail|video|laundering|narcotics|drug|passport|customs|officer|arrested|giraftari|girftari)/i;
+  const policeReqRegex = /(?<![\p{L}\p{M}\p{N}])(cbi|police|customs|narcotics|officer|arrest|giraftari|girftari|fir|laundering|jail|case|cyber|commissioner)(?![\p{L}\p{M}\p{N}])[\s\S]*?(?<![\p{L}\p{M}\p{N}])(arrest|fir|disconnect|jail|video|laundering|narcotics|drug|passport|customs|officer|arrested|giraftari|girftari)(?![\p{L}\p{M}\p{N}])/iu;
   const hasArrestStrong = policeReqRegex.test(text) || matchPattern(text, lowerText, ARREST_STRONG.concat(ARREST_STRONG_DEV));
   const hasArrestMod = matchPattern(text, lowerTextNoUrls, ARREST_MODERATE) || SPELLING_VARIANTS.arrested.test(lowerTextNoUrls);
   
@@ -521,7 +527,7 @@ function isUrlShortened(url: string): boolean {
 function hasActionDemand(lowerText: string): boolean {
   const actionDemands = ["verify", "update", "pay", "click", "link", "call", "confirm", "check", "karo", "turant", "approve"];
   for (const action of actionDemands) {
-    if (lowerText.includes(action)) return true;
+    if (buildWordBoundaryRegex(action).test(lowerText)) return true;
   }
   return false;
 }
@@ -537,7 +543,7 @@ function runCFNRules(
   const matches: CFNRuleMatch[] = [];
 
   const hasStrongCategory = (cat: ScamCategory) => signals.some(s => s.category === cat && s.tier === "STRONG");
-  const matchWords = (words: string[]) => words.some(w => lowerText.includes(w));
+  const matchWords = (words: string[]) => words.some(w => buildWordBoundaryRegex(w).test(text));
 
   // CFN-01: Government/police impersonation + arrest threat
   const hasGovAgency = matchWords(["cbi", "customs", "narcotics", "enforcement directorate", "cyber crime", "cybercell", "cyber cell", "cyber police"]);
@@ -589,7 +595,7 @@ function runCFNRules(
 
   // CFN-05: Utility disconnection + call/URL demand
   const hasUtility = matchWords(["electricity", "bijli", "bijlee", "power", "gas", "lpg", "water", "बिजली"]);
-  const hasDisconnect = matchWords(["disconnect", "cut", "band", "kat", "discontinued", "कट जाएगा", "कट जाएगी", "बंद हो"]);
+  const hasDisconnect = matchWords(["disconnect", "disconnected", "disconnection", "cut", "band", "kat", "discontinued", "कट जाएगा", "कट जाएगी", "काट दिया जाएगा", "बंद हो"]);
   const hasContactDemand = hasUrl ||
     matchWords(["call", "contact", "pay", "number", "officer", "helpline", "कॉल", "संपर्क"]) ||
     Boolean(text.match(/\b\d{10}\b/));

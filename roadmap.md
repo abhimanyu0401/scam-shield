@@ -34,8 +34,8 @@ Supabase (Postgres + auth). Email/password/display-name signup, no email-confirm
 
 **Key format note:** this project uses Supabase's newer publishable/secret key system (`sb_publishable_...`), not the legacy anon/service_role JWT keys — the legacy format is being deprecated. Use the Publishable key client-side; the Secret key isn't needed for basic auth, only for later privileged server-side operations. Get exact env var names from the project's "Connect" dialog rather than assuming — this has tripped up naming before (Redis, Gemini SDK) and Supabase's key system changed recently enough that older documentation/training data may reference the old anon-key pattern.
 
-### Phase 10 — Voice note / call recording analysis (Day 3, owner: Sneha)
-Third input mode. Gemini's native audio understanding, reusing the Phase 2 pipeline. Content/pattern analysis only — not biometric voice-clone detection. `NOT_A_CALL` guard (mirrors `NOT_A_MESSAGE`). Should-Have: audio-specific content flags (scripted cadence, generic call-center phrasing).
+### Phase 10 — Voice note / call recording analysis (Day 3, owner: Sneha — Completed & Verified)
+Third input mode. Gemini's native audio understanding integrated with Phase B AI resilience router. Content/pattern analysis only — not biometric voice-clone detection. `NOT_A_CALL` & `NO_SPEECH_DETECTED` guards (mirrors `NOT_A_MESSAGE`), silence/near-silence artifact filters, and audio-specific delivery flags (scripted cadence, generic call-center phrasing, automated IVR fairness, Unicode script-hardened word boundaries). Live 10-test matrix fully passing.
 
 ### Phase 11 — Named community confirmations (Day 4, owner: Abhimanyu)
 Circle members confirm/deny a report by name (Instagram-style, 2-3 names then "+N more"), visually distinct from the existing AI-similarity clustering badge. Reporter excluded from confirming their own report. Reporter can delete their own report; admin can delete any report in their group. Requires a stable `reportId` — confirmations stored as a Redis set keyed to that ID. Redis TTL auto-expiry on reports (60 days default).
@@ -91,10 +91,10 @@ Live-URL sanity check, rest before demo day.
 |---|---|---|---|
 | `feature/supabase-auth` | 9 (auth) | Abhimanyu | ✅ Merged |
 | `feature/circles-groups` | 9 (groups/invites) | Abhimanyu | ✅ Merged |
-| `feature/audio-input` | 10 | Sneha | **Start now** — independent of auth |
-| `feature/rate-limiting` | 12 (backend) | Sneha/Abhimanyu | **Start now** — independent |
+| `feature/audio-specific-flags` | 10 (audio & word boundary) | Sneha | ✅ **Ready to merge** |
+| `feature/API-rate-limiting-and-fallback` | 12 (backend resilience) | Sneha/Abhimanyu | ✅ **Merged** |
 | `feature/accessibility-ui` | 12 (frontend) | Abhash | **Start now** — independent, pure frontend/copy work |
-| `feature/community-confirmations` | 11 | Abhimanyu | **Ready to start** — Phase 9 (auth + groups) fully merged |
+| `feature/community-confirmations` | 11 | Abhimanyu | **Ready to start** — Phase 9 & Phase B AI resilience merged |
 
 **`page.tsx` conflict warning:** audio input, the verdict banner, and accessibility work all touch this file. Even building in parallel, merge these branches one at a time and pull `main` between each — don't leave all four open and diverging for days at once.
 

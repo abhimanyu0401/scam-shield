@@ -217,11 +217,16 @@ export async function normalizeRequestInput(
       );
     }
 
+    const isTimestampOrSilenceArtifact =
+      /^\s*(\[?\d{1,2}:\d{2}(?::\d{2})?\]?|\.{1,4}|--:--)\s*$/i.test(cleanAudioText) ||
+      /^[\s\W\d_]+$/.test(cleanAudioText);
+
     if (
       !cleanAudioText ||
       cleanAudioText.includes("NO_SPEECH_DETECTED") ||
       cleanAudioText.includes("NO_SPEECH_FOUND") ||
-      cleanAudioText.length < MIN_EXTRACTED_TEXT_LENGTH
+      cleanAudioText.length < MIN_EXTRACTED_TEXT_LENGTH ||
+      isTimestampOrSilenceArtifact
     ) {
       throw new SentinelDetectedError(
         "NO_SPEECH_DETECTED",

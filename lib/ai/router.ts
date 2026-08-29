@@ -241,7 +241,15 @@ export async function routeScamAnalysis(
   const qm = options.quotaManager ?? { tryReserveQuota };
   const fallback = options.fallbackEngine ?? defaultFallbackEngine;
 
-  // Retrieve candidate models ordered by priority for 'text' capability
+  // NOTE: getEligibleModels("text") is used here regardless of input.sourceType.
+  // This means Groq (openai/gpt-oss-120b) is a valid last-resort candidate for
+  // scoring even when the original input was audio. Groq ignores audioData and
+  // scores the transcript as plain text only — it will NOT apply audio-specific
+  // delivery/cadence flags (see AUDIO_ANALYSIS_GUIDANCE in providers/gemini.ts).
+  // This is an accepted, deliberate trade-off: text-only-but-scored beats no
+  // answer at all if all Gemini candidates are quota-exhausted or circuit-broken.
+  // Do not "fix" this by filtering Groq out for audio without team discussion —
+  // it was decided explicitly, not missed.
   const eligibleModels = getEligibleModels("text");
 
   const telemetry: RouterTelemetry = {
