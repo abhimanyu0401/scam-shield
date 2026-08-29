@@ -41,18 +41,33 @@ import {
 // ---------------------------------------------------------------------------
 
 /**
+ * Audio analysis instructions and strict guardrails for acoustic/cadence reasoning.
+ */
+const AUDIO_ANALYSIS_GUIDANCE = `
+AUDIO ANALYSIS INSTRUCTIONS:
+The attached audio is provided alongside the transcript above. In addition to analyzing the spoken words, evaluate the delivery, tone, cadence, and acoustic characteristics of the speech:
+
+1. Audio-Specific Flags Vocabulary:
+   - "Scripted or robotic delivery": The speaker sounds unnaturally mechanical, monotone, reading from a rigid script without natural human inflections, or exhibits artificial cadence.
+   - "Generic call-center ambience": Background sounds characteristic of a call-center environment — overlapping call chatter, hold-queue noise, headset audio quality — rather than a single person's normal calling environment.
+   - "Delivery inconsistent with message urgency": Specifically when the tone is flat, calm, or disengaged while the words describe severe/urgent consequences (e.g. claiming imminent arrest or account freeze in a routine, unemotional, or clearly prerecorded manner). Do not flag the reverse — a genuinely distressed or emotional speaker describing a real problem is not itself suspicious.
+
+2. Guardrails (Strict):
+   - Do NOT flag accent, non-native pronunciation, regional speech patterns, or speech impediments as robotic or scripted.
+   - Do NOT attempt to identify, verify, or describe who the speaker is — no voice-biometric or speaker-identity judgments, only delivery characteristics of the speech itself.
+   - Legitimate automated systems (bank IVR, appointment reminders) can sound robotic without being scams — treat delivery as one signal among several feeding the overall score, not a standalone verdict, and avoid flagging clearly-labeled automated/IVR systems just for sounding automated.
+`;
+
+/**
  * Builds the production scam-analysis prompt.
- *
- * This function is a verbatim copy of the anonymous template literal in
- * app/api/check/route.ts lines 244–270.
- *
- * DO NOT alter the prompt text. Any change here must mirror a corresponding
- * change in the production route to maintain parity.
  */
 function buildScamAnalysisPrompt(
   text: string,
   languageLabel: "English" | "Hindi",
+  hasAudio = false,
 ): string {
+  const audioGuidance = hasAudio ? AUDIO_ANALYSIS_GUIDANCE : "";
+
   return `Analyze the following message for scam patterns.
 Return a JSON object with EXACTLY the following structure:
 {
@@ -72,7 +87,7 @@ Recommended Action: [one sentence on what the recipient should do next]"
 
 If riskScore is below 75, return an empty string for this field. Extract entities only from what is literally present in the message — do not invent or guess.)
 }
-
+${audioGuidance}
 IMPORTANT: Write the "explanation" field in ${languageLabel}. Keep all "flags" array values in English. Write "complaintDraft" in English regardless of language setting.
 
 Message to analyze:
@@ -225,13 +240,29 @@ export class GeminiProvider implements AIProvider {
     _language: "en" | "hi",
     languageLabel: "English" | "Hindi",
     signal: AbortSignal,
+    audioData?: { data: string; mimeType: string } | null,
   ): Promise<ParsedAIResponse> {
     const client = this.getClient();
-    const prompt = buildScamAnalysisPrompt(text, languageLabel);
+    const hasAudio = Boolean(audioData?.data && audioData?.mimeType);
+    const prompt = buildScamAnalysisPrompt(text, languageLabel, hasAudio);
+
+    const contents = hasAudio && audioData
+      ? [
+          {
+            inlineData: {
+              mimeType: audioData.mimeType,
+              data: audioData.data,
+            },
+          },
+          {
+            text: prompt,
+          },
+        ]
+      : prompt;
 
     const sdkPromise = client.models.generateContent({
       model: modelId,
-      contents: prompt,
+      contents,
       config: {
         responseMimeType: "application/json",
         responseSchema: {

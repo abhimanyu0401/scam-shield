@@ -77,6 +77,7 @@ export interface AIProvider {
     language: "en" | "hi",
     languageLabel: "English" | "Hindi",
     signal: AbortSignal,
+    audioData?: { data: string; mimeType: string } | null,
   ): Promise<ParsedAIResponse>;
 
   /**

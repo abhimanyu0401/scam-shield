@@ -37,6 +37,12 @@ export interface NormalizedInput {
   /** The human-readable language label injected into the AI prompt. */
   languageLabel: "English" | "Hindi";
 
+  /** Preserved raw audio data for multimodal acoustic analysis (if input was audio). */
+  audioData?: {
+    data: string;
+    mimeType: string;
+  } | null;
+
   /** Metadata extracted during normalization, available to enrichment steps. */
   extractedMetadata?: {
     /** All URLs found in the normalized text. */

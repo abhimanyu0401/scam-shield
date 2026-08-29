@@ -243,6 +243,7 @@ export class GroqProvider implements AIProvider {
     _language: "en" | "hi",
     languageLabel: "English" | "Hindi",
     signal: AbortSignal,
+    _audioData?: { data: string; mimeType: string } | null,
   ): Promise<ParsedAIResponse> {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {

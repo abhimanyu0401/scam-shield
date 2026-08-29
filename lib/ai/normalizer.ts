@@ -37,6 +37,27 @@ export const MAX_BASE64_PAYLOAD_LENGTH = 3.8 * 1024 * 1024;
 /** Minimum length of readable text required after OCR/transcription. */
 export const MIN_EXTRACTED_TEXT_LENGTH = 3;
 
+/** Normalizes audio MIME types for Gemini API compatibility. */
+export function normalizeAudioMimeType(mime: string): string {
+  const clean = mime.toLowerCase().trim();
+  const map: Record<string, string> = {
+    "audio/mp3": "audio/mp3",
+    "audio/mpeg": "audio/mp3",
+    "audio/wav": "audio/wav",
+    "audio/x-wav": "audio/wav",
+    "audio/ogg": "audio/ogg",
+    "audio/opus": "audio/ogg",
+    "audio/webm": "audio/webm",
+    "audio/aac": "audio/aac",
+    "audio/m4a": "audio/aac",
+    "audio/x-m4a": "audio/aac",
+    "audio/mp4": "audio/mp4",
+    "audio/flac": "audio/flac",
+    "audio/x-flac": "audio/flac",
+  };
+  return map[clean] || clean;
+}
+
 // ---------------------------------------------------------------------------
 // 2. Normalization Error Hierarchy
 // ---------------------------------------------------------------------------
@@ -153,6 +174,7 @@ export async function normalizeRequestInput(
 
   let textToAnalyze = "";
   let sourceType: InputSourceType = "text";
+  let audioData: { data: string; mimeType: string } | null = null;
 
   // --- 2. Modality Intake & Preprocessing ---
   if (body.audioBase64 && body.mimeType) {
@@ -168,10 +190,17 @@ export async function normalizeRequestInput(
       );
     }
 
+    const normalizedMimeType = normalizeAudioMimeType(body.mimeType);
+
+    audioData = {
+      data: body.audioBase64,
+      mimeType: normalizedMimeType,
+    };
+
     // Call transcription through the AI router, reusing the single request DeadlineTracker
     const transcription = await routeTranscription(
       body.audioBase64,
-      body.mimeType,
+      normalizedMimeType,
       {
         deadlineTracker: tracker,
         ...options.routerOptions,
@@ -188,11 +217,16 @@ export async function normalizeRequestInput(
       );
     }
 
+    const isTimestampOrSilenceArtifact =
+      /^\s*(\[?\d{1,2}:\d{2}(?::\d{2})?\]?|\.{1,4}|--:--)\s*$/i.test(cleanAudioText) ||
+      /^[\s\W\d_]+$/.test(cleanAudioText);
+
     if (
       !cleanAudioText ||
       cleanAudioText.includes("NO_SPEECH_DETECTED") ||
       cleanAudioText.includes("NO_SPEECH_FOUND") ||
-      cleanAudioText.length < MIN_EXTRACTED_TEXT_LENGTH
+      cleanAudioText.length < MIN_EXTRACTED_TEXT_LENGTH ||
+      isTimestampOrSilenceArtifact
     ) {
       throw new SentinelDetectedError(
         "NO_SPEECH_DETECTED",
@@ -271,5 +305,6 @@ export async function normalizeRequestInput(
     sourceType,
     language,
     languageLabel,
+    audioData,
   };
 }

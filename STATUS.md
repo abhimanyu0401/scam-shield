@@ -8,6 +8,9 @@ _Update this when you start, pause, or finish a session — and always as part o
 
 | Phase | Feature | Owner | Branch | Status |
 |---|---|---|---|---|
+| 10 | Audio-specific flags (cadence/phrasing) | Sneha | `feature/audio-specific-flags` | Ready to merge — Delivery reasoning, Unicode word boundaries, silence guards & 10-test matrix fully verified |
+| Fix | Regex word-boundary keyword matching | Sneha | `fix/regex-word-boundary` | Ready to merge — isolated keyword word-boundary fix |
+| 10 | In-browser live recording | Sneha/Abhash | `feature/live-recording` | Ready to start — depends on merged audio branches |
 | 11 | Named community confirmations | Abhimanyu | `feature/community-confirmations` | Ready to start — Phase 9 schema & Phase B1-B10 AI resilience fully complete |
 
 ## ✅ Done & Merged
@@ -52,6 +55,9 @@ _Update this when you start, pause, or finish a session — and always as part o
 | **Phase B8 (Resilience & Redis Hardening)** | 19 / 19 passed | **PASS** |
 | **Phase B9 (Safe Browsing Production Wiring)** | 32 / 32 passed | **PASS** |
 | **Phase B10 (Localhost Production-Path Resilience)** | 35 / 35 passed | **PASS** |
+| **Unicode Word-Boundary Suite (`test-word-boundary.ts`)** | 17 / 17 passed | **PASS** |
+| **Silence Guard Suite (`test-silence-guards.ts`)** | 5 / 5 passed | **PASS** |
+| **Full 10-Test Multimodal Integration Matrix** | 10 / 10 passed | **PASS** |
 
 ### Manual Localhost Fallback Verification
 - Gemini available → Primary Gemini selected (`gemini-3.5-flash-lite`).
@@ -70,6 +76,9 @@ _Update this when you start, pause, or finish a session — and always as part o
 
 - Phase 10 v1 limitation: Audio detection quality depends on Gemini transcription with no fallback on noisy/accented/compressed audio.
 - Phase 10 prompt note: `NOT_A_CALL` guard is strictly topic-blind to avoid false-rejecting clean speech.
+- Phase 10 model/quota handoff note: Model routing for audio now flows through the Phase B AI resilience router (`lib/ai/router.ts`), eliminating hardcoded model IDs in `route.ts`.
+- Audio checks can silently fall back to text-only scoring (no acoustic/delivery flags) if all Gemini models are unavailable — this is accepted behavior, not a bug.
+- Silence/near-silence audio: guarded against known Gemini hallucination patterns (timestamps, punctuation-only output). A genuine short-word hallucination from silence (e.g. a fabricated real word under Gemini's control, not junk characters) would still theoretically bypass this guard and be scored as normal text — no case of this has been observed in testing, but it is not structurally ruled out. Revisit with server-side audio energy detection (Option a) if this becomes a practical problem.
 - B10 accepted limitation: Redis multi-node cluster fail-over probe recovery relies on clock synchronization across application workers.
 
 ---
@@ -80,4 +89,3 @@ _Update this when you start, pause, or finish a session — and always as part o
 2. Update your own row when you start, pause, or finish.
 3. Move your row to "Done & Merged" once your PR is approved and merged.
 4. Keep entries short — one line per item, this file should take 15 seconds to read.
-
