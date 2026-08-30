@@ -219,7 +219,7 @@ export async function normalizeRequestInput(
 
     const isTimestampOrSilenceArtifact =
       /^\s*(\[?\d{1,2}:\d{2}(?::\d{2})?\]?|\.{1,4}|--:--)\s*$/i.test(cleanAudioText) ||
-      /^[\s\W\d_]+$/.test(cleanAudioText);
+      !/\p{L}/u.test(cleanAudioText);
 
     if (
       !cleanAudioText ||

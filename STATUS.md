@@ -18,6 +18,7 @@ _Update this when you start, pause, or finish a session — and always as part o
 - Phases 1-8 (see `roadmap.md` Section 2 for full detail)
 - Phase 9a: Supabase auth foundation (`feature/supabase-auth`, merged)
 - Phase 9b: Groups & invite-only circles (`feature/circles-groups`, merged) — invite-code display, state-leak on auth transitions, auth-gated Radar view, permanent join/create entry points, state consolidated into `useGroups` hook
+- **Phase 9c: Multi-group reporting** (`feature/multi-group-reporting`, completed & verified) — single canonical report submission to multiple groups simultaneously, immediate `groupIds` deduplication, server-side `group_members` authorization guard (HTTP 403 Forbidden security), strictly isolated per-group `clusterIds: Record<string, string>` map, canonical Redis key `report:${id}` with 60-day TTL, and multi-group toggle UI defaulting to active circle.
 - Phase 10: Voice/audio input v1 (`feature/audio-input`, merged) — v1 audio transcription: file upload only (.mp3, .wav, .m4a, .ogg, .webm, .aac; in-browser recording deferred to buffer days), generic flags only (audio-specific cadence/phrasing flags deferred)
 - **Phase B1–B10: Production AI Resilience Subsystem** (`feature/API-rate-limiting-and-fallback`, completed & verified)
 
@@ -74,6 +75,7 @@ _Update this when you start, pause, or finish a session — and always as part o
 
 ## ⚠️ Known issues / things to flag for others
 
+- **Phase 11 note (Confirmations & Delete schema dependency)**: `CircleReport` schema has migrated from `circleId: string` to `groupIds: string[]` and `clusterIds: Record<string, string>` (clean break, `circleId` removed). Canonical report is stored under `report:${id}` with a 60-day Redis TTL (`{ ex: 5184000 }`). When deleting a report in Phase 11, it must be removed from EVERY `circle:${gid}` list listed in `groupIds` as well as the canonical `report:${id}` key.
 - Phase 10 v1 limitation: Audio detection quality depends on Gemini transcription with no fallback on noisy/accented/compressed audio.
 - Phase 10 prompt note: `NOT_A_CALL` guard is strictly topic-blind to avoid false-rejecting clean speech.
 - Phase 10 model/quota handoff note: Model routing for audio now flows through the Phase B AI resilience router (`lib/ai/router.ts`), eliminating hardcoded model IDs in `route.ts`.

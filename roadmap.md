@@ -34,6 +34,9 @@ Supabase (Postgres + auth). Email/password/display-name signup, no email-confirm
 
 **Key format note:** this project uses Supabase's newer publishable/secret key system (`sb_publishable_...`), not the legacy anon/service_role JWT keys — the legacy format is being deprecated. Use the Publishable key client-side; the Secret key isn't needed for basic auth, only for later privileged server-side operations. Get exact env var names from the project's "Connect" dialog rather than assuming — this has tripped up naming before (Redis, Gemini SDK) and Supabase's key system changed recently enough that older documentation/training data may reference the old anon-key pattern.
 
+### Phase 9c — Multi-group reporting (Completed & Verified)
+Single canonical report submission to multiple target circles simultaneously (`groupIds: string[]` replacing `circleId: string`). Target groups are de-duplicated immediately and verified server-side against Supabase `group_members` (HTTP 403 Forbidden security). Similarity clustering is strictly isolated per group via `clusterIds: Record<string, string>` map on the canonical report (no cross-group correlation). Report is stored as a copy in `circle:${gid}` for each group and in canonical key `report:${id}` with 60-day Redis TTL (`{ ex: 5184000 }`). Responsive multi-group toggle selector with "Select All" / "Active Only" controls.
+
 ### Phase 10 — Voice note / call recording analysis (Day 3, owner: Sneha — Completed & Verified)
 Third input mode. Gemini's native audio understanding integrated with Phase B AI resilience router. Content/pattern analysis only — not biometric voice-clone detection. `NOT_A_CALL` & `NO_SPEECH_DETECTED` guards (mirrors `NOT_A_MESSAGE`), silence/near-silence artifact filters, and audio-specific delivery flags (scripted cadence, generic call-center phrasing, automated IVR fairness, Unicode script-hardened word boundaries). Live 10-test matrix fully passing.
 
@@ -91,10 +94,11 @@ Live-URL sanity check, rest before demo day.
 |---|---|---|---|
 | `feature/supabase-auth` | 9 (auth) | Abhimanyu | ✅ Merged |
 | `feature/circles-groups` | 9 (groups/invites) | Abhimanyu | ✅ Merged |
+| `feature/multi-group-reporting` | 9c (multi-group reporting) | Abhimanyu | ✅ **Ready to merge** |
 | `feature/audio-specific-flags` | 10 (audio & word boundary) | Sneha | ✅ **Ready to merge** |
 | `feature/API-rate-limiting-and-fallback` | 12 (backend resilience) | Sneha/Abhimanyu | ✅ **Merged** |
 | `feature/accessibility-ui` | 12 (frontend) | Abhash | **Start now** — independent, pure frontend/copy work |
-| `feature/community-confirmations` | 11 | Abhimanyu | **Ready to start** — Phase 9 & Phase B AI resilience merged |
+| `feature/community-confirmations` | 11 | Abhimanyu | **Ready to start** — Phase 9a/b/c & Phase B AI resilience merged |
 
 **`page.tsx` conflict warning:** audio input, the verdict banner, and accessibility work all touch this file. Even building in parallel, merge these branches one at a time and pull `main` between each — don't leave all four open and diverging for days at once.
 

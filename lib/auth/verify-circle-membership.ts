@@ -79,3 +79,103 @@ export async function verifyCircleMembership(circleId: string): Promise<CircleAu
     };
   }
 }
+
+export type MultiCircleAuthResult =
+  | { success: true; user: User; groupIds: string[] }
+  | { success: false; errorResponse: NextResponse };
+
+/**
+ * Server-side helper to validate multiple groupIds, authenticate caller via Supabase SSR,
+ * and verify membership across all requested groups in a single query to `group_members`.
+ */
+export async function verifyMultipleCircleMemberships(
+  groupIds: string[]
+): Promise<MultiCircleAuthResult> {
+  if (!Array.isArray(groupIds) || groupIds.length === 0) {
+    return {
+      success: false,
+      errorResponse: NextResponse.json(
+        { error: "At least one group must be specified." },
+        { status: 400 }
+      ),
+    };
+  }
+
+  // De-duplicate immediately
+  const cleanGroupIds = Array.from(
+    new Set(groupIds.map((g) => (typeof g === "string" ? g.trim() : "")).filter(Boolean))
+  );
+
+  if (cleanGroupIds.length === 0 || cleanGroupIds.some((gid) => !UUID_REGEX.test(gid))) {
+    return {
+      success: false,
+      errorResponse: NextResponse.json(
+        { error: "Invalid group ID format." },
+        { status: 400 }
+      ),
+    };
+  }
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return {
+        success: false,
+        errorResponse: NextResponse.json(
+          { error: "Authentication required" },
+          { status: 401 }
+        ),
+      };
+    }
+
+    const { data: memberships, error: memberError } = await supabase
+      .from("group_members")
+      .select("group_id")
+      .in("group_id", cleanGroupIds)
+      .eq("user_id", user.id);
+
+    if (memberError) {
+      return {
+        success: false,
+        errorResponse: NextResponse.json(
+          { error: "Failed to verify group membership" },
+          { status: 500 }
+        ),
+      };
+    }
+
+    const verifiedSet = new Set((memberships || []).map((m) => m.group_id));
+    const allAuthorized = cleanGroupIds.every((gid) => verifiedSet.has(gid));
+
+    if (!allAuthorized || (memberships || []).length < cleanGroupIds.length) {
+      return {
+        success: false,
+        errorResponse: NextResponse.json(
+          { error: "You are not a member of one or more selected groups." },
+          { status: 403 }
+        ),
+      };
+    }
+
+    return {
+      success: true,
+      user,
+      groupIds: cleanGroupIds,
+    };
+  } catch (err) {
+    console.error("Multi-group membership verification error:", err);
+    return {
+      success: false,
+      errorResponse: NextResponse.json(
+        { error: "Authentication failed" },
+        { status: 500 }
+      ),
+    };
+  }
+}
+

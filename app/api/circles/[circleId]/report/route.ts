@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
-import { verifyCircleMembership } from "@/lib/auth/verify-circle-membership";
+import { verifyMultipleCircleMemberships } from "@/lib/auth/verify-circle-membership";
 
 const redis = new Redis({
   url: process.env.REDIS_KV_REST_API_URL!,
@@ -11,8 +11,8 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 export interface CircleReport {
   id: string;
-  circleId: string;
-  clusterId: string;
+  groupIds: string[];
+  clusterIds: Record<string, string>;
   userId?: string;
   text: string;
   riskScore: number;
@@ -43,13 +43,7 @@ export async function POST(
   try {
     const { circleId } = await params;
 
-    // 1. Authenticate user and verify circle membership
-    const auth = await verifyCircleMembership(circleId);
-    if (!auth.success) {
-      return auth.errorResponse;
-    }
-
-    // 2. Parse request JSON body safely
+    // 1. Parse request JSON body safely
     let body: any;
     try {
       body = await req.json();
@@ -57,7 +51,34 @@ export async function POST(
       return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
     }
 
-    // 3. Require and validate analysisId
+    // 2. Authoritative target group resolution & immediate deduplication
+    const rawGroupIds: string[] =
+      Array.isArray(body?.groupIds) && body.groupIds.length > 0
+        ? body.groupIds
+        : [circleId];
+
+    const cleanGroupIds = Array.from(
+      new Set(
+        rawGroupIds
+          .map((g: any) => (typeof g === "string" ? g.trim() : ""))
+          .filter(Boolean)
+      )
+    );
+
+    if (cleanGroupIds.length === 0 || cleanGroupIds.some((gid) => !UUID_REGEX.test(gid))) {
+      return NextResponse.json(
+        { error: "Invalid group ID format." },
+        { status: 400 }
+      );
+    }
+
+    // 3. Authenticate user and verify membership across ALL target groups
+    const auth = await verifyMultipleCircleMemberships(cleanGroupIds);
+    if (!auth.success) {
+      return auth.errorResponse;
+    }
+
+    // 4. Require and validate analysisId
     if (!body.analysisId || typeof body.analysisId !== "string" || !UUID_REGEX.test(body.analysisId.trim())) {
       return NextResponse.json(
         { error: "Invalid or expired analysis ID. Please run a fresh scam check before reporting." },
@@ -66,7 +87,7 @@ export async function POST(
     }
     const cleanAnalysisId = body.analysisId.trim();
 
-    // 4. Retrieve server-verified analysis from Redis
+    // 5. Retrieve server-verified analysis from Redis
     let cachedData: any = null;
     try {
       cachedData = await redis.get(`analysis:${cleanAnalysisId}`);
@@ -97,56 +118,61 @@ export async function POST(
       );
     }
 
-    // 5. Use server-stored verified analysis fields exclusively
+    // 6. Use server-stored verified analysis fields exclusively
     const cleanText = analysis.text.trim();
     const cleanRiskScore = analysis.riskScore;
     const cleanFlags = analysis.flags;
     const cleanExplanation = analysis.explanation;
     const cleanEmbedding: number[] | null = Array.isArray(analysis.embedding) ? analysis.embedding : null;
 
-    // 6. Read existing reports for cosine similarity clustering
-    let existingReports: CircleReport[] = [];
-    try {
-      const rawData = await redis.lrange(`circle:${auth.circleId}`, 0, -1);
-      existingReports = rawData.map((item: any) =>
-        typeof item === "string" ? JSON.parse(item) : item
-      );
-    } catch (err: any) {
-      console.warn("Could not read reports from Redis:", err);
-    }
-
-    // 7. Secure ID generation and clustering
     const newId = crypto.randomUUID();
-    let assignedClusterId = newId;
 
-    if (cleanEmbedding) {
-      let highestSim = -1;
-      let bestMatch: CircleReport | null = null;
+    // 7. Strictly per-group similarity clustering — NO cross-group correlation
+    const clusterIds: Record<string, string> = {};
 
-      for (const report of existingReports) {
-        if (
-          report.circleId === auth.circleId &&
-          Array.isArray(report.embedding) &&
-          report.embedding.length === cleanEmbedding.length
-        ) {
-          const sim = cosineSimilarity(cleanEmbedding, report.embedding);
-          if (sim > highestSim) {
-            highestSim = sim;
-            bestMatch = report;
+    for (const gid of cleanGroupIds) {
+      let groupExistingReports: CircleReport[] = [];
+      try {
+        const rawData = await redis.lrange(`circle:${gid}`, 0, -1);
+        groupExistingReports = rawData.map((item: any) =>
+          typeof item === "string" ? JSON.parse(item) : item
+        );
+      } catch (err: any) {
+        console.warn(`Could not read reports for circle:${gid} from Redis:`, err);
+      }
+
+      let assignedClusterId = newId;
+
+      if (cleanEmbedding) {
+        let highestSim = -1;
+        let bestMatch: CircleReport | null = null;
+
+        for (const report of groupExistingReports) {
+          if (
+            Array.isArray(report.embedding) &&
+            report.embedding.length === cleanEmbedding.length
+          ) {
+            const sim = cosineSimilarity(cleanEmbedding, report.embedding);
+            if (sim > highestSim) {
+              highestSim = sim;
+              bestMatch = report;
+            }
           }
+        }
+
+        if (bestMatch && highestSim > 0.75) {
+          assignedClusterId = bestMatch.clusterIds?.[gid] ?? bestMatch.id;
         }
       }
 
-      if (bestMatch && highestSim > 0.75) {
-        assignedClusterId = bestMatch.clusterId;
-      }
+      clusterIds[gid] = assignedClusterId;
     }
 
-    // 8. Build new report with server-controlled identity & timestamp
+    // 8. Build single canonical report with server-controlled identity & timestamp
     const newReport: CircleReport = {
       id: newId,
-      circleId: auth.circleId,
-      clusterId: assignedClusterId,
+      groupIds: cleanGroupIds,
+      clusterIds,
       userId: auth.user.id,
       text: cleanText,
       riskScore: cleanRiskScore,
@@ -156,9 +182,21 @@ export async function POST(
       timestamp: new Date().toISOString(),
     };
 
-    // 9. Push to Redis and trim to keep last 200 reports
-    await redis.rpush(`circle:${auth.circleId}`, JSON.stringify(newReport));
-    await redis.ltrim(`circle:${auth.circleId}`, -200, -1);
+    const serializedReport = JSON.stringify(newReport);
+
+    // 9. Push to Redis for each target group and store canonical report with 60-day TTL
+    // NOTE for Phase 11 (delete): this report exists as a copy in circle:${gid} for EACH gid in groupIds, plus the canonical report:${id} key. Any delete operation must remove it from every one of these locations, not just one group's list.
+    for (const gid of cleanGroupIds) {
+      await redis.rpush(`circle:${gid}`, serializedReport);
+      await redis.ltrim(`circle:${gid}`, -200, -1);
+    }
+
+    // Canonical report key with 60-day TTL (60 * 24 * 60 * 60 seconds)
+    try {
+      await redis.set(`report:${newId}`, serializedReport, { ex: 60 * 24 * 60 * 60 });
+    } catch (setErr) {
+      console.warn("Failed to set canonical report TTL key:", setErr);
+    }
 
     // 10. Consume analysis key so it cannot be reused
     try {
@@ -173,5 +211,3 @@ export async function POST(
     return NextResponse.json({ error: "Failed to save report" }, { status: 500 });
   }
 }
-
-
