@@ -179,3 +179,105 @@ export async function verifyMultipleCircleMemberships(
   }
 }
 
+export type AnyCircleAuthResult =
+  | { success: true; user: User; authorizedGroupIds: string[] }
+  | { success: false; errorResponse: NextResponse };
+
+/**
+ * Server-side helper to validate groupIds, authenticate caller via Supabase SSR,
+ * and verify membership in AT LEAST ONE of the specified groups in `group_members`.
+ */
+export async function verifyAnyCircleMembership(
+  groupIds: string[]
+): Promise<AnyCircleAuthResult> {
+  if (!Array.isArray(groupIds) || groupIds.length === 0) {
+    return {
+      success: false,
+      errorResponse: NextResponse.json(
+        { error: "At least one group must be specified.", code: "INVALID_GROUPS" },
+        { status: 400 }
+      ),
+    };
+  }
+
+  // De-duplicate immediately
+  const cleanGroupIds = Array.from(
+    new Set(groupIds.map((g) => (typeof g === "string" ? g.trim() : "")).filter(Boolean))
+  );
+
+  if (cleanGroupIds.length === 0 || cleanGroupIds.some((gid) => !UUID_REGEX.test(gid))) {
+    return {
+      success: false,
+      errorResponse: NextResponse.json(
+        { error: "Invalid group ID format.", code: "INVALID_GROUP_ID" },
+        { status: 400 }
+      ),
+    };
+  }
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return {
+        success: false,
+        errorResponse: NextResponse.json(
+          { error: "Authentication required", code: "UNAUTHENTICATED" },
+          { status: 401 }
+        ),
+      };
+    }
+
+    const { data: memberships, error: memberError } = await supabase
+      .from("group_members")
+      .select("group_id")
+      .in("group_id", cleanGroupIds)
+      .eq("user_id", user.id);
+
+    if (memberError) {
+      return {
+        success: false,
+        errorResponse: NextResponse.json(
+          { error: "Failed to verify group membership", code: "DATABASE_ERROR" },
+          { status: 500 }
+        ),
+      };
+    }
+
+    const authorized = (memberships || []).map((m) => m.group_id);
+
+    if (authorized.length === 0) {
+      return {
+        success: false,
+        errorResponse: NextResponse.json(
+          {
+            error: "You are not a member of any circle this report was shared to.",
+            code: "NOT_A_MEMBER",
+          },
+          { status: 403 }
+        ),
+      };
+    }
+
+    return {
+      success: true,
+      user,
+      authorizedGroupIds: authorized,
+    };
+  } catch (err) {
+    console.error("verifyAnyCircleMembership error:", err);
+    return {
+      success: false,
+      errorResponse: NextResponse.json(
+        { error: "Authentication failed", code: "AUTH_FAILED" },
+        { status: 500 }
+      ),
+    };
+  }
+}
+
+
