@@ -11,7 +11,7 @@ _Update this when you start, pause, or finish a session — and always as part o
 | 10 | Audio-specific flags (cadence/phrasing) | Sneha | `feature/audio-specific-flags` | Ready to merge — Delivery reasoning, Unicode word boundaries, silence guards & 10-test matrix fully verified |
 | Fix | Regex word-boundary keyword matching | Sneha | `fix/regex-word-boundary` | Ready to merge — isolated keyword word-boundary fix |
 | 10 | In-browser live recording | Sneha/Abhash | `feature/live-recording` | Ready to start — depends on merged audio branches |
-| 11 | Named community confirmations | Abhimanyu | `feature/community-confirmations` | Ready to start — Phase 9 schema & Phase B1-B10 AI resilience fully complete |
+| 11 | Named community confirmations | Abhimanyu | `feature/community-confirmations` | Ready to merge — Phase 11 (11.1–11.5) complete: vote data layer, vote/delete API routes, feed resolution, and confirm/deny/delete UI fully verified |
 
 ## ✅ Done & Merged
 
@@ -59,6 +59,11 @@ _Update this when you start, pause, or finish a session — and always as part o
 | **Unicode Word-Boundary Suite (`test-word-boundary.ts`)** | 17 / 17 passed | **PASS** |
 | **Silence Guard Suite (`test-silence-guards.ts`)** | 5 / 5 passed | **PASS** |
 | **Full 10-Test Multimodal Integration Matrix** | 10 / 10 passed | **PASS** |
+| **Phase 9c (Multi-Group Reporting: `test-multi-group-report.ts`)** | 16 / 16 passed | **PASS** |
+| **Phase 11.1 (Vote Data Layer: `test-phase-11-1-votes.ts`)** | 19 / 19 passed | **PASS** |
+| **Phase 11.2 (Vote Route: `test-phase-11-2-vote-route.ts`)** | 24 / 24 passed | **PASS** |
+| **Phase 11.3 (Delete Route: `test-phase-11-3-delete-route.ts`)** | 20 / 20 passed | **PASS** |
+| **Phase 11.4 (Feed Vote Resolution: `test-phase-11-4-feed-votes.ts`)** | 12 / 12 passed (20-rep: ~73ms, 100-rep: ~165ms @ 25ms RTT) | **PASS** |
 
 ### Manual Localhost Fallback Verification
 - Gemini available → Primary Gemini selected (`gemini-3.5-flash-lite`).
@@ -82,6 +87,7 @@ _Update this when you start, pause, or finish a session — and always as part o
 - Audio checks can silently fall back to text-only scoring (no acoustic/delivery flags) if all Gemini models are unavailable — this is accepted behavior, not a bug.
 - Silence/near-silence audio: guarded against known Gemini hallucination patterns (timestamps, punctuation-only output). A genuine short-word hallucination from silence (e.g. a fabricated real word under Gemini's control, not junk characters) would still theoretically bypass this guard and be scored as normal text — no case of this has been observed in testing, but it is not structurally ruled out. Revisit with server-side audio energy detection (Option a) if this becomes a practical problem.
 - B10 accepted limitation: Redis multi-node cluster fail-over probe recovery relies on clock synchronization across application workers.
+- **Phase 11 delete safety-net note:** Report deletion uses exact-string `LREM` as primary pass. The fallback ID-based safety net (read-filter-rewrite) is non-atomic and could theoretically race with a concurrent `RPUSH` to the same circle at the same millisecond; accepted for hackathon MVP over transaction complexity.
 
 ---
 

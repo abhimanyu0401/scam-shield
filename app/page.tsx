@@ -17,6 +17,20 @@ interface CheckResult {
   financialLossLikely?: boolean;
 }
 
+interface VoterInfo {
+  userId: string;
+  displayName: string;
+}
+
+interface ReportVoteData {
+  confirms: number;
+  denies: number;
+  total: number;
+  confirmedBy: VoterInfo[];
+  deniedBy: VoterInfo[];
+  currentUserVote: "confirm" | "deny" | null;
+}
+
 interface CircleReport {
   id: string;
   groupIds: string[];
@@ -27,6 +41,8 @@ interface CircleReport {
   explanation: string;
   timestamp: string;
   clusterCount: number;
+  isOwnReport?: boolean;
+  votes?: ReportVoteData;
 }
 
 function RiskBadge({ score }: { score: number }) {
@@ -139,6 +155,13 @@ export default function Home() {
   // Copy button states
   const [shareAlertCopied, setShareAlertCopied] = useState(false);
   const [draftCopied, setDraftCopied] = useState(false);
+
+  // Voting & Deletion states (Phase 11)
+  const [votingReportId, setVotingReportId] = useState<string | null>(null);
+  const [voteError, setVoteError] = useState<{ reportId: string; message: string } | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteWarning, setDeleteWarning] = useState<{ reportId: string; message: string } | null>(null);
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -262,6 +285,115 @@ export default function Home() {
       setFeedError(e.message);
     } finally {
       setFeedLoading(false);
+    }
+  }
+
+  async function handleVote(reportId: string, vote: "confirm" | "deny") {
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+    setVotingReportId(reportId);
+    setVoteError(null);
+    try {
+      const res = await fetch(`/api/circles/reports/${reportId}/vote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vote }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.code === "IS_REPORTER") {
+          setVoteError({ reportId, message: "You cannot vote on your own report." });
+        } else if (data.code === "NOT_A_MEMBER") {
+          setVoteError({ reportId, message: "You are not a member of any circle this report was shared to." });
+        } else {
+          setVoteError({ reportId, message: data.error || "Failed to submit vote." });
+        }
+        return;
+      }
+
+      if (data.success && data.summary) {
+        setFeedReports((prev) =>
+          prev.map((r) => {
+            if (r.id !== reportId) return r;
+            const currentVotes = r.votes || {
+              confirms: 0,
+              denies: 0,
+              total: 0,
+              confirmedBy: [],
+              deniedBy: [],
+              currentUserVote: null,
+            };
+
+            let updatedConfirmed = [...currentVotes.confirmedBy];
+            let updatedDenied = [...currentVotes.deniedBy];
+
+            updatedConfirmed = updatedConfirmed.filter((v) => v.userId !== user.id);
+            updatedDenied = updatedDenied.filter((v) => v.userId !== user.id);
+
+            const myVoterInfo = { userId: user.id, displayName: displayName || "You" };
+
+            if (vote === "confirm") {
+              if (updatedConfirmed.length < 3) {
+                updatedConfirmed.unshift(myVoterInfo);
+              }
+            } else if (vote === "deny") {
+              if (updatedDenied.length < 3) {
+                updatedDenied.unshift(myVoterInfo);
+              }
+            }
+
+            return {
+              ...r,
+              votes: {
+                confirms: data.summary.confirms,
+                denies: data.summary.denies,
+                total: data.summary.total,
+                confirmedBy: updatedConfirmed.slice(0, 3),
+                deniedBy: updatedDenied.slice(0, 3),
+                currentUserVote: vote,
+              },
+            };
+          })
+        );
+      }
+    } catch (err: any) {
+      setVoteError({ reportId, message: err.message || "Failed to submit vote." });
+    } finally {
+      setVotingReportId(null);
+    }
+  }
+
+  async function handleDeleteReport(reportId: string) {
+    setDeletingId(reportId);
+    setDeleteWarning(null);
+    try {
+      const res = await fetch(`/api/circles/reports/${reportId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.code === "PARTIAL_DELETE_FAILURE") {
+          setFeedReports((prev) => prev.filter((r) => r.id !== reportId));
+          setDeleteWarning({
+            reportId,
+            message: "Report removed from feed, but cleanup across some groups was incomplete.",
+          });
+        } else {
+          setDeleteWarning({
+            reportId,
+            message: data.error || "Failed to delete report.",
+          });
+        }
+        return;
+      }
+      setFeedReports((prev) => prev.filter((r) => r.id !== reportId));
+      setConfirmDeleteId(null);
+    } catch (err: any) {
+      setDeleteWarning({ reportId, message: err.message || "Failed to delete report." });
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -1255,6 +1387,127 @@ export default function Home() {
                           ))}
                         </div>
                       )}
+
+                      {/* Community Confirmation Consensus & Action Bar (Phase 11) */}
+                      <div className="pt-3 border-t border-white/10 space-y-2.5">
+                        {/* Inline Vote Error */}
+                        {voteError && voteError.reportId === report.id && (
+                          <div className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded-lg flex justify-between items-center animate-fade-in">
+                            <span>⚠️ {voteError.message}</span>
+                            <button onClick={() => setVoteError(null)} className="opacity-70 hover:opacity-100 cursor-pointer">✕</button>
+                          </div>
+                        )}
+
+                        {/* Inline Delete Warning */}
+                        {deleteWarning && deleteWarning.reportId === report.id && (
+                          <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg flex justify-between items-center animate-fade-in">
+                            <span>⚠️ {deleteWarning.message}</span>
+                            <button onClick={() => setDeleteWarning(null)} className="opacity-70 hover:opacity-100 cursor-pointer">✕</button>
+                          </div>
+                        )}
+
+                        {/* Name-Stack Consensus Badges */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {report.votes && (report.votes.confirms > 0 || report.votes.denies > 0) ? (
+                            <>
+                              {report.votes.confirms > 0 && (
+                                <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 px-2.5 py-1 rounded-full text-xs font-medium">
+                                  <span className="font-bold">✓</span>
+                                  <span>
+                                    {report.votes.confirmedBy.map((v) => v.displayName).join(", ")}
+                                    {report.votes.confirms > report.votes.confirmedBy.length
+                                      ? ` +${report.votes.confirms - report.votes.confirmedBy.length} more`
+                                      : ""}{" "}
+                                    confirmed
+                                  </span>
+                                </div>
+                              )}
+                              {report.votes.denies > 0 && (
+                                <div className="inline-flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/25 text-rose-300 px-2.5 py-1 rounded-full text-xs font-medium">
+                                  <span className="font-bold">✕</span>
+                                  <span>
+                                    {report.votes.deniedBy.map((v) => v.displayName).join(", ")}
+                                    {report.votes.denies > report.votes.deniedBy.length
+                                      ? ` +${report.votes.denies - report.votes.deniedBy.length} more`
+                                      : ""}{" "}
+                                    denied
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">
+                              👥 No community confirmations yet
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Actions Row: Author Delete vs Member Confirm/Deny */}
+                        {report.isOwnReport ? (
+                          <div className="flex items-center justify-end pt-1">
+                            {confirmDeleteId === report.id ? (
+                              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 p-1.5 rounded-xl animate-fade-in">
+                                <span className="text-xs text-red-300 font-medium px-1">Delete from all circles?</span>
+                                <button
+                                  onClick={() => handleDeleteReport(report.id)}
+                                  disabled={deletingId === report.id}
+                                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-500 text-white transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                  {deletingId === report.id ? "Deleting..." : "Yes, Delete"}
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="px-2 py-1 rounded-lg text-xs text-slate-300 hover:text-white transition-colors cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setConfirmDeleteId(report.id)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 transition-colors cursor-pointer min-h-[38px]"
+                              >
+                                <span>🗑️</span>
+                                <span>Delete Report</span>
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              onClick={() => handleVote(report.id, "confirm")}
+                              disabled={votingReportId === report.id}
+                              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer min-h-[38px] ${
+                                report.votes?.currentUserVote === "confirm"
+                                  ? "bg-emerald-500/25 border-2 border-emerald-400 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+                                  : "bg-white/5 border border-white/15 text-slate-300 hover:bg-emerald-500/10 hover:border-emerald-500/40 hover:text-emerald-300"
+                              }`}
+                            >
+                              <span>✓</span>
+                              <span>
+                                {report.votes?.currentUserVote === "confirm" ? "Confirmed" : "Confirm"}
+                                {report.votes && report.votes.confirms > 0 ? ` (${report.votes.confirms})` : ""}
+                              </span>
+                            </button>
+
+                            <button
+                              onClick={() => handleVote(report.id, "deny")}
+                              disabled={votingReportId === report.id}
+                              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer min-h-[38px] ${
+                                report.votes?.currentUserVote === "deny"
+                                  ? "bg-rose-500/25 border-2 border-rose-400 text-rose-200 shadow-[0_0_12px_rgba(244,63,94,0.35)]"
+                                  : "bg-white/5 border border-white/15 text-slate-300 hover:bg-rose-500/10 hover:border-rose-500/40 hover:text-rose-300"
+                              }`}
+                            >
+                              <span>✕</span>
+                              <span>
+                                {report.votes?.currentUserVote === "deny" ? "Denied" : "Deny"}
+                                {report.votes && report.votes.denies > 0 ? ` (${report.votes.denies})` : ""}
+                              </span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
