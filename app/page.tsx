@@ -19,7 +19,7 @@ interface CheckResult {
 
 interface CircleReport {
   id: string;
-  circleId: string;
+  groupIds: string[];
   clusterId: string;
   text: string;
   riskScore: number;
@@ -91,7 +91,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   // Reporting
-  const [reportCircleId, setReportCircleId] = useState<string>("");
+  const [selectedReportGroupIds, setSelectedReportGroupIds] = useState<string[]>([]);
   const [reportStatus, setReportStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   // Radar Feed
@@ -118,13 +118,20 @@ export default function Home() {
 
   useEffect(() => {
     if (groups.length > 0) {
-      if (!reportCircleId || !groups.find(g => g.id === reportCircleId)) setReportCircleId(groups[0].id);
-      if (!selectedCircle || !groups.find(g => g.id === selectedCircle)) setSelectedCircle(groups[0].id);
+      if (!selectedCircle || !groups.find(g => g.id === selectedCircle)) {
+        setSelectedCircle(groups[0].id);
+      }
+      setSelectedReportGroupIds((prev) => {
+        const validPrev = prev.filter((id) => groups.some((g) => g.id === id));
+        if (validPrev.length > 0) return validPrev;
+        const defaultId = selectedCircle && groups.some((g) => g.id === selectedCircle) ? selectedCircle : groups[0].id;
+        return [defaultId];
+      });
     } else {
-      setReportCircleId("");
+      setSelectedReportGroupIds([]);
       setSelectedCircle("");
     }
-  }, [groups]);
+  }, [groups, selectedCircle]);
 
 
 
@@ -213,14 +220,16 @@ export default function Home() {
   }
 
   async function handleReport() {
-    if (!result || !result.analysisId || !reportCircleId) return;
+    if (!result || !result.analysisId || selectedReportGroupIds.length === 0) return;
     setReportStatus("loading");
     try {
-      const res = await fetch(`/api/circles/${reportCircleId}/report`, {
+      const activeGroupContext = selectedReportGroupIds[0] || selectedCircle || "default";
+      const res = await fetch(`/api/circles/${activeGroupContext}/report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           analysisId: result.analysisId,
+          groupIds: selectedReportGroupIds,
         }),
       });
 
@@ -891,35 +900,110 @@ export default function Home() {
 
                 {/* Report to Circle section */}
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-100 mb-2">
-                    Warn Your Circle
-                  </h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-semibold text-slate-100">
+                      Warn Your Circle
+                    </h3>
+                    {groups.length > 1 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedReportGroupIds(groups.map((g) => g.id))}
+                          className="text-[11px] font-semibold text-[#7CB8F2] hover:underline cursor-pointer"
+                        >
+                          Select All
+                        </button>
+                        <span className="text-slate-500 text-xs">|</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const activeId = selectedCircle && groups.some((g) => g.id === selectedCircle) ? selectedCircle : groups[0].id;
+                            setSelectedReportGroupIds([activeId]);
+                          }}
+                          className="text-[11px] font-semibold text-slate-400 hover:text-slate-200 cursor-pointer"
+                        >
+                          Active Only
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-400 mb-3">
                     If this is a scam, share it with your community to protect others from falling for it.
                   </p>
-                  <div className="flex gap-2 items-center">
-                    <select
-                      value={reportCircleId}
-                      onChange={(e) => setReportCircleId(e.target.value)}
-                      className="flex-1 rounded-xl bg-[#181818] border border-white/15 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7CB8F2]"
-                      disabled={groups.length === 0}
-                    >
-                      {groups.length === 0 ? (
-                        <option value="" className="bg-[#232323]">No groups available</option>
-                      ) : (
-                        groups.map(group => (
-                          <option key={group.id} value={group.id} className="bg-[#232323]">{group.name}</option>
-                        ))
-                      )}
-                    </select>
-                    <button
-                      onClick={handleReport}
-                      disabled={reportStatus === "loading" || reportStatus === "success" || !reportCircleId}
-                      className="px-4 py-2 rounded-xl text-sm font-bold bg-[#31487A] hover:bg-[#7CB8F2] hover:text-[#0f172a] text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                    >
-                      {reportStatus === "loading" ? "Reporting..." : reportStatus === "success" ? "✓ Reported" : "Report"}
-                    </button>
-                  </div>
+
+                  {groups.length === 0 ? (
+                    <div className="flex gap-2 items-center">
+                      <select
+                        disabled
+                        className="flex-1 rounded-xl bg-[#181818] border border-white/15 text-slate-400 px-3 py-2 text-sm"
+                      >
+                        <option value="">No groups available</option>
+                      </select>
+                      <button
+                        disabled
+                        className="px-4 py-2 rounded-xl text-sm font-bold bg-[#31487A] text-white opacity-50 cursor-not-allowed"
+                      >
+                        Report
+                      </button>
+                    </div>
+                  ) : groups.length === 1 ? (
+                    <div className="flex gap-2 items-center">
+                      <div className="flex-1 px-3.5 py-2 rounded-xl bg-[#181818] border border-white/15 text-slate-200 text-sm flex items-center justify-between">
+                        <span className="font-medium">{groups[0].name}</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-[#7CB8F2]/20 text-[#7CB8F2]">Selected</span>
+                      </div>
+                      <button
+                        onClick={handleReport}
+                        disabled={reportStatus === "loading" || reportStatus === "success" || selectedReportGroupIds.length === 0}
+                        className="px-4 py-2 rounded-xl text-sm font-bold bg-[#31487A] hover:bg-[#7CB8F2] hover:text-[#0f172a] text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      >
+                        {reportStatus === "loading" ? "Reporting..." : reportStatus === "success" ? "✓ Reported" : "Report"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {groups.map((group) => {
+                          const isSelected = selectedReportGroupIds.includes(group.id);
+                          return (
+                            <button
+                              key={group.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedReportGroupIds((prev) =>
+                                  isSelected
+                                    ? prev.filter((id) => id !== group.id)
+                                    : [...prev, group.id]
+                                );
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                                isSelected
+                                  ? "bg-[#7CB8F2]/20 border-[#7CB8F2] text-[#7CB8F2] shadow-sm ring-1 ring-[#7CB8F2]/40"
+                                  : "bg-[#181818] border-white/15 text-slate-300 hover:border-white/30 hover:text-white"
+                              }`}
+                            >
+                              <span>{isSelected ? "✓" : "+"}</span>
+                              <span>{group.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="text-[11px] text-slate-400">
+                          {selectedReportGroupIds.length === 0
+                            ? "Select at least 1 group"
+                            : `Sharing to ${selectedReportGroupIds.length} of ${groups.length} circle${selectedReportGroupIds.length > 1 ? "s" : ""}`}
+                        </span>
+                        <button
+                          onClick={handleReport}
+                          disabled={reportStatus === "loading" || reportStatus === "success" || selectedReportGroupIds.length === 0}
+                          className="px-4 py-2 rounded-xl text-sm font-bold bg-[#31487A] hover:bg-[#7CB8F2] hover:text-[#0f172a] text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          {reportStatus === "loading" ? "Reporting..." : reportStatus === "success" ? "✓ Reported" : `Report (${selectedReportGroupIds.length})`}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {groups.length === 0 && !groupsLoading && (
                     <div className="mt-4 p-4 rounded-xl border border-dashed border-white/20 bg-white/5 text-center space-y-2">
                       <p className="text-sm text-slate-300">You need to join or create a circle before reporting.</p>
