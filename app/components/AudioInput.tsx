@@ -135,8 +135,7 @@ export function AudioInput({ onAudioReady, onError }: AudioInputProps) {
 
         {fileName ? (
           <div className="flex flex-col items-center justify-center gap-2">
-            <div className="flex items-center gap-2 text-[#7CB8F2] font-semibold text-sm">
-              <span>🎙️</span>
+            <div className="flex items-center gap-2 text-[#1D68FF] font-semibold text-sm">
               <span className="truncate max-w-[280px] sm:max-w-md">{fileName}</span>
               {fileSizeStr && (
                 <span className="text-xs text-slate-400 font-normal">({fileSizeStr})</span>
@@ -145,15 +144,14 @@ export function AudioInput({ onAudioReady, onError }: AudioInputProps) {
             <button
               type="button"
               onClick={handleClear}
-              className="text-xs text-red-400 hover:text-red-300 underline mt-1 transition-colors"
+              className="text-xs text-red-400 hover:text-red-300 underline mt-1 transition-colors cursor-pointer"
             >
               Remove file
             </button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-1.5 text-slate-300 text-sm">
-            <span className="text-2xl mb-1">🎙️</span>
-            <span>Click to browse or drag a voice note / call audio here</span>
+            <span className="font-semibold block text-base text-white">Click to browse or drag a voice note / call audio here</span>
             <span className="text-xs text-slate-400">Supported: MP3, WAV, M4A, OGG, WEBM, AAC (Max 2.5MB)</span>
           </div>
         )}
