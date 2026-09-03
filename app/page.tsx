@@ -96,6 +96,7 @@ export default function Home() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [selectedCircleDetailId, setSelectedCircleDetailId] = useState<string | null>(null);
+  const [circleRefreshTrigger, setCircleRefreshTrigger] = useState<number>(0);
   const { user, displayName, loading: authLoading } = useAuth();
 
   // Navigation indicator & scroll spy refs
@@ -296,6 +297,23 @@ export default function Home() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const clearAnalysisState = useCallback(() => {
+    setText("");
+    setImageFile(null);
+    setImagePreview(null);
+    setAudioData(null);
+    setResult(null);
+    setShowDetailedAnalysis(false);
+    setError(null);
+    setReportStatus("idle");
+  }, []);
+
+  useEffect(() => {
+    if (activeNav !== "analyse" && reportStatus === "success") {
+      clearAnalysisState();
+    }
+  }, [activeNav, reportStatus, clearAnalysisState]);
+
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
@@ -399,6 +417,8 @@ export default function Home() {
         throw new Error("Failed to report");
       }
       setReportStatus("success");
+      setCircleRefreshTrigger(Date.now());
+      fetchAllCirclesFeed();
     } catch (e) {
       console.error(e);
       setReportStatus("error");
@@ -480,6 +500,15 @@ export default function Home() {
       setAllCircleReports(deduped);
       setGroupReportsMap(counts);
       setGroupLastActivityMap(lastAct);
+
+      setSelectedActivityReport(prev => {
+        if (!prev) return prev;
+        const updated = deduped.find(r => r.id === prev.id);
+        if (updated) {
+           return { ...updated, sourceGroupName: prev.sourceGroupName, sourceGroupId: prev.sourceGroupId };
+        }
+        return prev;
+      });
 
       const targetReports = selectedCircle
         ? (results.find((r) => r.groupId === selectedCircle)?.reports || [])
@@ -603,6 +632,8 @@ export default function Home() {
               }
             : prev
         );
+        setCircleRefreshTrigger(Date.now());
+        fetchAllCirclesFeed();
       }
     } catch (err: any) {
       setVoteError({ reportId, message: err.message || "Failed to submit vote." });
@@ -641,6 +672,8 @@ export default function Home() {
         setSelectedActivityReport(null);
       }
       setConfirmDeleteId(null);
+      setCircleRefreshTrigger(Date.now());
+      fetchAllCirclesFeed();
     } catch (err: any) {
       setDeleteWarning({ reportId, message: err.message || "Failed to delete report." });
     } finally {
@@ -964,6 +997,7 @@ export default function Home() {
                             const supabase = createClient();
                             const { error } = await supabase.auth.signOut();
                             if (error) throw error;
+                            clearAnalysisState();
                             setProfileMenuOpen(false);
                           } catch (err: any) {
                             setSignOutError(err.message || "Failed to sign out");
@@ -1861,6 +1895,8 @@ export default function Home() {
                   cachedReports={allCircleReports.filter(r => r.sourceGroupId === selectedCircleDetailId)}
                   onBack={() => setSelectedCircleDetailId(null)}
                   onOpenReport={(report) => setSelectedActivityReport(report)}
+                  refreshTrigger={circleRefreshTrigger}
+                  onReportsUpdated={fetchAllCirclesFeed}
                 />
               ) : (
                 <>
@@ -3334,6 +3370,26 @@ export default function Home() {
                         ⚠️ {flag}
                       </span>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Community Intelligence (Scam Radar Clustering) */}
+              {typeof selectedActivityReport.clusterCount === "number" && selectedActivityReport.clusterCount > 1 && (
+                <div className="space-y-1.5">
+                  <label className={`text-xs font-black uppercase tracking-wider ${isDark ? "text-slate-400" : "text-slate-700"}`}>
+                    Community Intelligence
+                  </label>
+                  <div
+                    className={`p-3.5 sm:p-4 rounded-xl border flex items-center gap-3 text-sm font-bold ${
+                      isDark ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-300" : "bg-indigo-50 border-indigo-200 text-indigo-800"
+                    }`}
+                  >
+                    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                    {selectedActivityReport.clusterCount - 1} similar {selectedActivityReport.clusterCount - 1 === 1 ? "report" : "reports"} detected
                   </div>
                 </div>
               )}
