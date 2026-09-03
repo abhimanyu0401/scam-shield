@@ -61,6 +61,8 @@ interface CircleDetailViewProps {
   onOpenReport: (report: CircleReport & { sourceGroupName: string; sourceGroupId: string }) => void;
   currentUser: any;
   cachedReports?: CircleReport[];
+  refreshTrigger?: number;
+  onReportsUpdated?: (reports: CircleReport[]) => void;
 }
 
 function formatRelativeTime(isoString?: string): string {
@@ -125,6 +127,8 @@ export function CircleDetailView({
   onOpenReport,
   currentUser,
   cachedReports,
+  refreshTrigger,
+  onReportsUpdated,
 }: CircleDetailViewProps) {
   const [activeTab, setActiveTab] = useState<"alerts" | "members">("alerts");
   const [reports, setReports] = useState<CircleReport[]>(cachedReports || []);
@@ -151,13 +155,17 @@ export function CircleDetailView({
         throw new Error(`Failed to load alerts (${res.status})`);
       }
       const data = await res.json();
-      setReports((data.reports || []) as CircleReport[]);
+      const newReports = (data.reports || []) as CircleReport[];
+      setReports(newReports);
+      if (onReportsUpdated) {
+        onReportsUpdated(newReports);
+      }
     } catch (err: any) {
       setReportsError(err.message || "Failed to load alerts.");
     } finally {
       setReportsLoading(false);
     }
-  }, [circle.id]);
+  }, [circle.id, onReportsUpdated]);
 
   // Fetch real members for this specific circle
   const fetchCircleMembers = useCallback(async () => {
@@ -190,6 +198,25 @@ export function CircleDetailView({
       setActivitiesLoading(false);
     }
   }, [circle.id]);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    await Promise.allSettled([
+      fetchCircleReports(),
+      fetchCircleMembers(),
+      fetchCircleActivity()
+    ]);
+    setIsRefreshing(false);
+  }, [fetchCircleReports, fetchCircleMembers, fetchCircleActivity, isRefreshing]);
+
+  useEffect(() => {
+    if (refreshTrigger) {
+      handleRefresh();
+    }
+  }, [refreshTrigger, handleRefresh]);
 
   // Initialize data fetching & register Supabase Realtime channel for group_members
   useEffect(() => {
@@ -425,11 +452,30 @@ export function CircleDetailView({
           {activeTab === "alerts" ? (
             /* ALERTS TAB */
             <div className="space-y-4">
-              <h2 className={`text-xl sm:text-2xl font-bold tracking-tight ${isDark ? "text-white" : "text-slate-950"}`}>
-                Recent Alerts
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className={`text-xl sm:text-2xl font-bold tracking-tight ${isDark ? "text-white" : "text-slate-950"}`}>
+                  Recent Alerts
+                </h2>
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    isDark
+                      ? "bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-50"
+                      : "bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50"
+                  }`}
+                  aria-label="Refresh Circle Data"
+                >
+                  <svg className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10" />
+                    <polyline points="1 20 1 14 7 14" />
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                  </svg>
+                  {isRefreshing ? "Refreshing..." : "Refresh"}
+                </button>
+              </div>
 
-              {reportsLoading ? (
+              {reportsLoading && reports.length === 0 ? (
                 <div className={`rounded-3xl border p-12 text-center space-y-3 ${cardBgClass}`}>
                   <div className="w-8 h-8 rounded-full border-2 border-[#1D68FF] border-t-transparent animate-spin mx-auto" />
                   <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>Loading alerts…</p>
@@ -530,11 +576,22 @@ export function CircleDetailView({
 
                             {/* Middle Information */}
                             <div className="space-y-1.5 min-w-0">
-                              {/* Risk Badge */}
-                              <div>
+                              {/* Risk Badge & Clustering */}
+                              <div className="flex items-center gap-2">
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-bold ${riskPillClass}`}>
                                   {isHighRisk ? "High Risk" : isMediumRisk ? "Medium Risk" : "Low Risk"}
                                 </span>
+                                {typeof report.clusterCount === "number" && report.clusterCount > 1 && (
+                                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold border ${
+                                    isDark ? "bg-indigo-500/10 text-indigo-300 border-indigo-500/20" : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                  }`}>
+                                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                    </svg>
+                                    {report.clusterCount - 1} {report.clusterCount - 1 === 1 ? "similar report" : "similar reports"}
+                                  </span>
+                                )}
                               </div>
 
                               {/* Alert Title */}
@@ -643,7 +700,7 @@ export function CircleDetailView({
                 )}
               </div>
 
-              {membersLoading ? (
+              {membersLoading && members.length === 0 ? (
                 <div className={`rounded-3xl border p-12 text-center space-y-3 ${cardBgClass}`}>
                   <div className="w-8 h-8 rounded-full border-2 border-[#1D68FF] border-t-transparent animate-spin mx-auto" />
                   <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>Loading members…</p>
@@ -903,7 +960,7 @@ export function CircleDetailView({
             </div>
 
             {/* Real Activity List */}
-            {activitiesLoading ? (
+            {activitiesLoading && activities.length === 0 ? (
               <div className="py-6 text-center space-y-2">
                 <div className="w-5 h-5 rounded-full border-2 border-[#1D68FF] border-t-transparent animate-spin mx-auto" />
                 <p className={`text-[11px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>Loading activity…</p>

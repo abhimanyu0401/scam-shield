@@ -127,15 +127,19 @@ export async function POST(req: NextRequest) {
     let serverEmbedding: number[] | null = aiResult.embedding ?? null;
 
     // If not generated yet (e.g. live AI model was used or fallback didn't generate one),
-    // generate a server-side embedding bounded by the remaining request deadline budget
-    if (!serverEmbedding && tracker.canAttempt() && normalized.text.trim().length > 0) {
-      const embedHandle = tracker.createAbortHandle(3000);
+    // generate a server-side embedding. We decouple this from the orchestration deadline
+    // tracker (which may be exhausted after a slow image OCR/analysis) to ensure image
+    // reports can still cluster. We use a dedicated 5-second timeout that fits within
+    // typical Serverless Function execution limits.
+    if (!serverEmbedding && normalized.text.trim().length > 0) {
+      const controller = new AbortController();
+      const timerId = setTimeout(() => controller.abort(), 5000);
       try {
-        serverEmbedding = await generateTextEmbedding(normalized.text, embedHandle.signal);
+        serverEmbedding = await generateTextEmbedding(normalized.text, controller.signal);
       } catch {
         // Fail-open: embedding generation failure must never block or fail the scam check
       } finally {
-        embedHandle.cancel();
+        clearTimeout(timerId);
       }
     }
 
