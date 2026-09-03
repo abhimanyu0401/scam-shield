@@ -18,6 +18,11 @@ import { Redis } from "@upstash/redis";
 
 export type VoteType = "confirm" | "deny";
 
+export interface VoteRecord {
+  vote: VoteType;
+  timestamp: string;
+}
+
 export interface VoteSummary {
   confirms: number;
   denies: number;
@@ -54,7 +59,7 @@ export function getVoteKey(reportId: string): string {
 }
 
 /**
- * Records or updates a user's vote ("confirm" | "deny") on a report.
+ * Records or updates a user's vote ("confirm" | "deny") on a report with a timestamp.
  *
  * Atomically writes the vote to `report:${reportId}:votes` and synchronizes
  * the vote hash's TTL with the parent report's remaining TTL.
@@ -63,13 +68,19 @@ export async function setVote(
   reportId: string,
   userId: string,
   vote: VoteType,
-  redisInstance?: Redis
+  redisInstance?: Redis,
+  timestamp?: string
 ): Promise<void> {
   const redis = redisInstance || getRedisClient();
   const voteKey = getVoteKey(reportId);
 
-  // 1. Write the vote into the hash (overwrites if user already voted)
-  await redis.hset(voteKey, { [userId]: vote });
+  const record: VoteRecord = {
+    vote,
+    timestamp: timestamp || new Date().toISOString(),
+  };
+
+  // 1. Write the vote into the hash as JSON (overwrites if user already voted)
+  await redis.hset(voteKey, { [userId]: JSON.stringify(record) });
 
   // 2. Query remaining TTL of parent canonical report key (`report:${reportId}`)
   //
@@ -100,12 +111,13 @@ export async function setVote(
 }
 
 /**
- * Retrieves all votes for a report as a record mapping userId to vote type.
+ * Retrieves all votes for a report with detailed record information including timestamps.
+ * Backward-compatible with legacy plain string vote values.
  */
-export async function getVotes(
+export async function getVotesDetailed(
   reportId: string,
   redisInstance?: Redis
-): Promise<Record<string, VoteType>> {
+): Promise<Record<string, VoteRecord>> {
   const redis = redisInstance || getRedisClient();
   const voteKey = getVoteKey(reportId);
 
@@ -115,17 +127,55 @@ export async function getVotes(
       return {};
     }
 
-    const votes: Record<string, VoteType> = {};
+    const records: Record<string, VoteRecord> = {};
     for (const [uid, v] of Object.entries(raw)) {
-      if (v === "confirm" || v === "deny") {
-        votes[uid] = v;
+      if (typeof v === "string") {
+        if (v === "confirm" || v === "deny") {
+          // Legacy plain string format
+          records[uid] = { vote: v, timestamp: "" };
+        } else {
+          try {
+            const parsed = JSON.parse(v);
+            if (parsed && (parsed.vote === "confirm" || parsed.vote === "deny")) {
+              records[uid] = {
+                vote: parsed.vote,
+                timestamp: typeof parsed.timestamp === "string" ? parsed.timestamp : "",
+              };
+            }
+          } catch {
+            // Ignore corrupted entries
+          }
+        }
+      } else if (v && typeof v === "object") {
+        const obj = v as Record<string, unknown>;
+        if (obj.vote === "confirm" || obj.vote === "deny") {
+          records[uid] = {
+            vote: obj.vote,
+            timestamp: typeof obj.timestamp === "string" ? obj.timestamp : "",
+          };
+        }
       }
     }
-    return votes;
+    return records;
   } catch (err) {
     console.warn(`Could not fetch votes for report:${reportId}:`, err);
     return {};
   }
+}
+
+/**
+ * Retrieves all votes for a report as a record mapping userId to vote type.
+ */
+export async function getVotes(
+  reportId: string,
+  redisInstance?: Redis
+): Promise<Record<string, VoteType>> {
+  const detailed = await getVotesDetailed(reportId, redisInstance);
+  const votes: Record<string, VoteType> = {};
+  for (const [uid, rec] of Object.entries(detailed)) {
+    votes[uid] = rec.vote;
+  }
+  return votes;
 }
 
 /**
@@ -164,9 +214,23 @@ export async function getUserVote(
   const voteKey = getVoteKey(reportId);
 
   try {
-    const vote = await redis.hget<VoteType>(voteKey, userId);
-    if (vote === "confirm" || vote === "deny") {
-      return vote;
+    const raw = await redis.hget<unknown>(voteKey, userId);
+    if (!raw) return null;
+    if (raw === "confirm" || raw === "deny") {
+      return raw;
+    }
+    if (typeof raw === "string") {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && (parsed.vote === "confirm" || parsed.vote === "deny")) {
+          return parsed.vote;
+        }
+      } catch {}
+    } else if (typeof raw === "object" && raw !== null) {
+      const obj = raw as Record<string, unknown>;
+      if (obj.vote === "confirm" || obj.vote === "deny") {
+        return obj.vote;
+      }
     }
     return null;
   } catch (err) {

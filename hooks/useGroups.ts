@@ -240,7 +240,8 @@ export function useGroups(user: any) {
         .insert({
           group_id: groupId,
           user_id: user.id,
-          role: 'member'
+          role: 'member',
+          joined_at: new Date().toISOString(),
         });
 
       if (joinError) {

@@ -388,6 +388,71 @@ export class GeminiProvider implements AIProvider {
 
     return (result as Awaited<typeof sdkPromise>).text ?? "";
   }
+
+  // -------------------------------------------------------------------------
+  // callEmbedding
+  // -------------------------------------------------------------------------
+
+  /**
+   * Generates a 3072-dimension semantic vector embedding for the given text using
+   * the gemini-embedding-001 model with RETRIEVAL_QUERY task type.
+   *
+   * Designed to match the precomputed scam-pattern embeddings in scam-pattern-embeddings.json
+   * (which were generated with gemini-embedding-001 and RETRIEVAL_DOCUMENT).
+   *
+   * Bounded by the passed AbortSignal.
+   * Returns null if unconfigured, aborted, timed out, or on SDK failure (fail-open).
+   */
+  async callEmbedding(
+    text: string,
+    signal: AbortSignal,
+    modelId: string = "gemini-embedding-001",
+    taskType: "RETRIEVAL_QUERY" | "RETRIEVAL_DOCUMENT" = "RETRIEVAL_QUERY",
+  ): Promise<number[] | null> {
+    if (!this.isConfigured()) {
+      return null;
+    }
+
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    try {
+      const client = this.getClient();
+      const sdkPromise = client.models.embedContent({
+        model: modelId,
+        contents: trimmed,
+        config: {
+          taskType,
+        },
+      });
+
+      const result = await raceWithAbort(sdkPromise, signal);
+      if (result === "__ABORTED__") {
+        return null;
+      }
+
+      const resObj = result as {
+        embedding?: { values?: number[] };
+        embeddings?: Array<{ values?: number[] }>;
+      };
+
+      const values =
+        resObj?.embedding?.values ??
+        resObj?.embeddings?.[0]?.values ??
+        null;
+
+      if (Array.isArray(values) && values.length > 0) {
+        return values;
+      }
+
+      return null;
+    } catch {
+      // Fail-open: embedding generation failure must never block or crash the request
+      return null;
+    }
+  }
 }
 
 /**

@@ -158,6 +158,12 @@ export interface AIAnalysisResponse {
    * "degraded-deterministic" → all AI models failed; rule-based engine used
    */
   analysisMode: AnalysisMode;
+
+  /**
+   * Optional semantic vector embedding if generated during analysis
+   * (e.g. by deterministic fallback engine or cached for Redis).
+   */
+  embedding?: number[] | null;
 }
 
 /**

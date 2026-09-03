@@ -36,7 +36,7 @@ export async function GET(
     // 2. Fetch all members of this group
     const { data: memberRows, error: memberError } = await supabase
       .from("group_members")
-      .select("group_id, user_id, role")
+      .select("group_id, user_id, role, joined_at")
       .eq("group_id", auth.circleId);
 
     if (memberError) {
@@ -75,12 +75,24 @@ export async function GET(
           : `Member ${index + 1}`;
       }
 
+      let joinedAtStr = "";
+      if (row.joined_at) {
+        try {
+          const parsedDate = new Date(row.joined_at);
+          if (!isNaN(parsedDate.getTime())) {
+            joinedAtStr = parsedDate.toISOString();
+          }
+        } catch {
+          joinedAtStr = "";
+        }
+      }
+
       return {
         id: `${row.group_id}-${row.user_id}`,
         userId: row.user_id,
         role: (row.role || "member") as "admin" | "member",
         displayName: name,
-        joinedAt: new Date().toISOString(),
+        joinedAt: joinedAtStr,
         isCurrentUser: isMe,
       };
     });

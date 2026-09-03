@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 import { verifyCircleMembership } from "@/lib/auth/verify-circle-membership";
 import { createClient } from "@/lib/supabase/server";
-import { getVotes, type VoteType } from "@/lib/redis/votes";
+import { getVotesDetailed, type VoteRecord } from "@/lib/redis/votes";
 
 const redis = new Redis({
   url: process.env.REDIS_KV_REST_API_URL!,
@@ -67,11 +67,11 @@ export async function GET(
       console.warn("Could not load reports for activity derivation:", err);
     }
 
-    // 4. Batch-fetch votes for reports to derive confirmation events
-    const reportVotesMap: Record<string, Record<string, VoteType>> = {};
+    // 4. Batch-fetch votes for reports to derive confirmation events with timestamps
+    const reportVotesMap: Record<string, Record<string, VoteRecord>> = {};
     for (const r of circleReports) {
       try {
-        const votes = await getVotes(r.id);
+        const votes = await getVotesDetailed(r.id);
         reportVotesMap[r.id] = votes;
       } catch {
         reportVotesMap[r.id] = {};
@@ -134,17 +134,28 @@ export async function GET(
 
       // Event: ALERT_CONFIRMED (only if confirmed votes exist)
       const votes = reportVotesMap[report.id] || {};
-      const confirms = Object.values(votes).filter((v) => v === "confirm").length;
+      const confirmVotes = Object.values(votes).filter((v) => v.vote === "confirm");
+      const confirms = confirmVotes.length;
       if (confirms > 0) {
+        // Deterministic confirmation timestamp: the earliest/qualifying confirmation vote
+        // that caused the alert to become confirmed.
+        const validTimestamps = confirmVotes
+          .map((v) => v.timestamp)
+          .filter((ts) => Boolean(ts) && !isNaN(new Date(ts).getTime()))
+          .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+        const confirmationTimestamp =
+          validTimestamps[0] || report.timestamp || new Date().toISOString();
+
         activities.push({
           id: `act-confirm-${report.id}`,
           type: "ALERT_CONFIRMED",
           actor: {
-            displayName: `${confirms} members`,
+            displayName: `${confirms} ${confirms === 1 ? "member" : "members"}`,
           },
           title: "Alert confirmed",
           desc: `${confirms} ${confirms === 1 ? "member" : "members"} confirmed an alert`,
-          timestamp: report.timestamp || new Date().toISOString(),
+          timestamp: confirmationTimestamp,
           metadata: {
             reportId: report.id,
             confirms,

@@ -1078,6 +1078,7 @@ export function createDeterministicFallbackEngine(
       isFallback: true,
       isDegraded: true,
       analysisMode: "degraded-deterministic",
+      embedding: result.embedding,
     };
   };
 }
