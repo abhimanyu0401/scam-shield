@@ -23,6 +23,8 @@
 | **Multi-Group Sharing** | **COMPLETE** | Single canonical submission to multiple circles simultaneously. Server-side Supabase `group_members` authorization guard (HTTP 403 prevention). |
 | **AI Resilience & Fallback** | **COMPLETE** | Multi-model routing (Gemini Flash → Groq/Llama → deterministic fallback), 20s global deadline tracker, Redis circuit breaker & quota manager. |
 | **Authentication & Groups** | **COMPLETE** | Supabase Auth (email/password), `profiles`, `groups`, and `group_members` relational tables. Personal Check remains 100% login-free. |
+| **Dashboard Analytics** | **COMPLETE** | Aggregates user activity, top scam categories, and circle statuses securely via Supabase and Redis. |
+| **Notifications System** | **COMPLETE** | Tracks user engagement activities and allows marking alerts/notifications as read. |
 
 ---
 
