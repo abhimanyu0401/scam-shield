@@ -8,6 +8,8 @@ import { AudioInput } from "@/app/components/AudioInput";
 import { CircleDetailView } from "@/app/components/CircleDetailView";
 import { HomeDashboard } from "@/app/components/HomeDashboard";
 import NotificationPopover from "./components/NotificationPopover";
+import NotificationToastContainer from "./components/NotificationToastContainer";
+import { useLiveNotifications } from "@/lib/hooks/useLiveNotifications";
 
 interface CheckResult {
   analysisId?: string;
@@ -434,8 +436,19 @@ export default function Home() {
     }
   }, [groups, selectedCircle]);
 
+  // Circle deep linking navigation handler
+  const navigateToCircle = useCallback((circleId: string) => {
+    setSelectedCircle(circleId);
+    setSelectedCircleDetailId(circleId);
+    handleNavClick("circle");
+  }, [handleNavClick]);
 
-
+  // Unified live notifications state (Single Source of Truth)
+  const liveNotifications = useLiveNotifications({
+    user,
+    refreshTrigger: circleRefreshTrigger,
+    onNavigateToCircle: navigateToCircle,
+  });
 
   // Copy button states
   const [shareAlertCopied, setShareAlertCopied] = useState(false);
@@ -1038,11 +1051,15 @@ export default function Home() {
               <div className="flex items-center gap-2 sm:gap-3">
                 <NotificationPopover
                   isDark={isDark}
-                  onNavigateToCircle={(circleId) => {
-                    setSelectedCircle(circleId);
-                    handleNavClick("circle");
-                  }}
-                  refreshTrigger={circleRefreshTrigger}
+                  onNavigateToCircle={navigateToCircle}
+                  notifications={liveNotifications.notifications}
+                  unreadCount={liveNotifications.unreadCount}
+                  loading={liveNotifications.loading}
+                  onMarkAsRead={liveNotifications.markAsRead}
+                  onMarkAllRead={liveNotifications.markAllAsRead}
+                  desktopPermission={liveNotifications.desktopPermission}
+                  onRequestDesktopPermission={liveNotifications.requestDesktopPermission}
+                  onRefresh={liveNotifications.refresh}
                 />
                 
                 <button
@@ -3668,6 +3685,15 @@ export default function Home() {
           }}
         />
       )}
+
+      {/* Live In-App Toast Container */}
+      <NotificationToastContainer
+        toasts={liveNotifications.toasts}
+        isDark={isDark}
+        onDismiss={liveNotifications.dismissToast}
+        onNavigateToCircle={navigateToCircle}
+        onMarkAsRead={liveNotifications.markAsRead}
+      />
     </div>
   );
 }
