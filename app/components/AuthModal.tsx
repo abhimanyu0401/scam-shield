@@ -291,7 +291,7 @@ export function AuthModal({ onClose, theme = "dark" }: AuthModalProps) {
               <div className="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-white/10 blur-xl pointer-events-none" />
               <div className="absolute -bottom-12 -left-12 w-44 h-44 rounded-full bg-black/20 blur-xl pointer-events-none" />
 
-              {/* PROMO CONTENT A (Sign In state: Welcome To Scam Shield! -> Sign Up ghost) */}
+              {/* PROMO CONTENT A (Sign In state: Welcome To KINKEEPER! -> Sign Up ghost) */}
               <div
                 className={`absolute inset-0 flex flex-col items-center justify-center p-8 text-center transition-all duration-700 ease-in-out ${
                   mode === "sign-in"
@@ -301,7 +301,7 @@ export function AuthModal({ onClose, theme = "dark" }: AuthModalProps) {
               >
                 <div className="space-y-2 max-w-xs">
                   <h3 className="text-3xl font-black tracking-tight leading-tight">
-                    Welcome To<br />Scam Shield!
+                    Welcome To<br />KINKEEPER!
                   </h3>
                   <p className="text-sm font-medium text-blue-100 pt-1">
                     New Here?
@@ -319,7 +319,7 @@ export function AuthModal({ onClose, theme = "dark" }: AuthModalProps) {
                 </div>
               </div>
 
-              {/* PROMO CONTENT B (Sign Up state: Welcome back To Scam Shield! -> Sign In ghost) */}
+              {/* PROMO CONTENT B (Sign Up state: Welcome back To KINKEEPER! -> Sign In ghost) */}
               <div
                 className={`absolute inset-0 flex flex-col items-center justify-center p-8 text-center transition-all duration-700 ease-in-out ${
                   mode === "sign-up"
@@ -329,7 +329,7 @@ export function AuthModal({ onClose, theme = "dark" }: AuthModalProps) {
               >
                 <div className="space-y-2 max-w-xs">
                   <h3 className="text-3xl font-black tracking-tight leading-tight">
-                    Welcome back To<br />Scam Shield!
+                    Welcome back To<br />KINKEEPER!
                   </h3>
                   <p className="text-sm font-medium text-blue-100 pt-1">
                     Already have an account?
@@ -363,7 +363,7 @@ export function AuthModal({ onClose, theme = "dark" }: AuthModalProps) {
             }`}
           >
             <h3 className="text-xl font-black tracking-tight leading-tight">
-              {mode === "sign-in" ? "Welcome To Scam Shield!" : "Welcome back To Scam Shield!"}
+              {mode === "sign-in" ? "Welcome To KINKEEPER!" : "Welcome back To KINKEEPER!"}
             </h3>
             <p className="text-xs font-medium text-blue-100 pt-1">
               {mode === "sign-in" ? "New Here?" : "Already have an account?"}

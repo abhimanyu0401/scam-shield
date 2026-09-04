@@ -90,8 +90,117 @@ function MiniRiskBadge({ score }: { score: number }) {
   );
 }
 
+// Multi-harmonic organic wave polygon generator for fluid theme transitions
+function generateOrganicWavePoints(
+  originX: number,
+  originY: number,
+  radius: number,
+  phase: number = 0,
+  numPoints: number = 48
+): string {
+  if (radius <= 0) {
+    return Array.from({ length: numPoints }, () => `${originX.toFixed(1)}px ${originY.toFixed(1)}px`).join(", ");
+  }
+
+  const points: string[] = [];
+  for (let i = 0; i < numPoints; i++) {
+    const angle = (2 * Math.PI * i) / numPoints;
+    // Multi-harmonic curved wave profile with sweeping organic crests
+    const waveModifier =
+      1 +
+      0.16 * Math.sin(3 * angle + phase) +
+      0.09 * Math.cos(5 * angle - phase * 1.5) +
+      0.05 * Math.sin(7 * angle + phase * 2);
+
+    const r = radius * waveModifier;
+    const x = originX + r * Math.cos(angle);
+    const y = originY + r * Math.sin(angle);
+    points.push(`${x.toFixed(1)}px ${y.toFixed(1)}px`);
+  }
+
+  return points.join(", ");
+}
+
 export default function Home() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const isTransitioningTheme = useRef(false);
+  const [waveOverlay, setWaveOverlay] = useState<{
+    color: string;
+    originX: number;
+    originY: number;
+  } | null>(null);
+
+  const handleThemeToggle = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (isTransitioningTheme.current) return;
+
+      const nextTheme = theme === "light" ? "dark" : "light";
+      const rect = e.currentTarget.getBoundingClientRect();
+      const originX = rect.left + rect.width / 2;
+      const originY = rect.top + rect.height / 2;
+
+      // Use native View Transitions API when available (Chrome, Edge, Safari 18+)
+      if (typeof document !== "undefined" && "startViewTransition" in document) {
+        isTransitioningTheme.current = true;
+
+        const maxDist = Math.hypot(
+          Math.max(originX, window.innerWidth - originX),
+          Math.max(originY, window.innerHeight - originY)
+        );
+
+        // Frame polygons (48 vertices each for smooth GPU interpolation)
+        const startPoly = `polygon(${generateOrganicWavePoints(originX, originY, 0, 0)})`;
+        const midPoly1 = `polygon(${generateOrganicWavePoints(originX, originY, maxDist * 0.4, 0.8)})`;
+        const midPoly2 = `polygon(${generateOrganicWavePoints(originX, originY, maxDist * 0.95, 1.6)})`;
+        const endPoly = `polygon(${generateOrganicWavePoints(originX, originY, maxDist * 1.8, 2.4)})`;
+
+        const transition = (document as any).startViewTransition(() => {
+          setTheme(nextTheme);
+        });
+
+        transition.ready
+          .then(() => {
+            const anim = document.documentElement.animate(
+              {
+                clipPath: [startPoly, midPoly1, midPoly2, endPoly],
+              },
+              {
+                duration: 1100,
+                easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+                pseudoElement: "::view-transition-new(root)",
+              }
+            );
+
+            anim.onfinish = () => {
+              isTransitioningTheme.current = false;
+            };
+          })
+          .catch(() => {
+            isTransitioningTheme.current = false;
+          });
+
+        transition.finished.finally(() => {
+          isTransitioningTheme.current = false;
+        });
+      } else {
+        // Fallback for browsers without View Transitions API
+        isTransitioningTheme.current = true;
+        setWaveOverlay({
+          color: nextTheme === "dark" ? "#060911" : "#FFFFFF",
+          originX,
+          originY,
+        });
+        setTimeout(() => {
+          setTheme(nextTheme);
+        }, 550);
+        setTimeout(() => {
+          setWaveOverlay(null);
+          isTransitioningTheme.current = false;
+        }, 1100);
+      }
+    },
+    [theme]
+  );
   const [activeNav, setActiveNav] = useState<"home" | "analyse" | "circle" | "about" | "features">("home");
   const [appMode, setAppMode] = useState<"personal" | "radar">("personal");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -715,7 +824,7 @@ export default function Home() {
               aria-label="Scam Shield Home"
             >
               <img
-                src={isDark ? "/assets/bl_logo.png" : "/assets/logo_light.png"}
+                src={isDark ? "/assets/Dark.png" : "/assets/LIGHT1.png"}
                 alt="Scam Shield"
                 className="h-12 sm:h-14 md:h-16 lg:h-[68px] xl:h-[76px] w-auto object-contain transition-all duration-200"
               />
@@ -811,7 +920,7 @@ export default function Home() {
           <div className="relative flex items-center gap-3 sm:gap-4">
             {/* Theme Toggle Pill (Matching User Reference Image) */}
             <button
-              onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
+              onClick={handleThemeToggle}
               className={`relative w-[76px] h-[38px] rounded-full p-1 transition-colors duration-300 flex items-center justify-between border cursor-pointer select-none focus:outline-none ${
                 isDark
                   ? "bg-[#0E1526] border-slate-700/80 shadow-inner"
@@ -1049,19 +1158,8 @@ export default function Home() {
             /* ── Public: Original Hero Section ── */
             <div className="min-h-[calc(85vh-100px)] flex items-center pb-2 sm:pb-4">
               <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 xl:gap-20 items-center">
-                {/* Left Column: Badge, Title, Description, Buttons, Trust Line */}
+                {/* Left Column: Title, Description, Buttons, Trust Line */}
                 <div className="lg:col-span-6 xl:col-span-6 space-y-6 sm:space-y-8 text-left">
-                  {/* Pill Badge */}
-                  <div
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold tracking-wider uppercase shadow-2xs ${
-                      isDark
-                        ? "bg-blue-950/60 border border-blue-800/80 text-sky-400"
-                        : "bg-blue-50/90 border border-blue-200/80 text-[#1D68FF]"
-                    }`}
-                  >
-                    <span className="text-xs sm:text-sm">✦</span>
-                    <span>AI-Powered Protection</span>
-                  </div>
 
                   {/* Main Headline */}
                   <h1
@@ -1130,7 +1228,7 @@ export default function Home() {
                 {/* Right Column: Hero image */}
                 <div className="lg:col-span-6 xl:col-span-6 relative flex items-center justify-center">
                   <img
-                    src="/assets/hero_img.png"
+                    src="/assets/Mainlogo.png"
                     alt="Scam Shield 3D AI Protection"
                     className="w-full max-w-[700px] lg:max-w-[780px] xl:max-w-[860px] h-auto object-contain select-none pointer-events-none filter drop-shadow-lg"
                   />
@@ -2376,17 +2474,7 @@ export default function Home() {
         {/* 4. FEATURES SECTION (Matching Reference Image) */}
         <section id="features-section" className="space-y-8 sm:space-y-10 text-left scroll-mt-24">
           {/* Header */}
-          <div className="space-y-3">
-            <div
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wider uppercase ${
-                isDark
-                  ? "bg-[#0C1B33] border border-[#1D68FF]/50 text-[#38BDF8] shadow-[0_0_15px_rgba(29,104,255,0.3)]"
-                  : "bg-blue-50/90 border border-blue-200/90 text-[#1D68FF] shadow-xs"
-              }`}
-            >
-              <span className="text-xs">✦</span>
-              <span>POWERFUL PROTECTION</span>
-            </div>
+          <div>
             <h2 className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>
               Built for Complete Scam Detection
             </h2>
@@ -3523,6 +3611,25 @@ export default function Home() {
 
       {authModalOpen && (
         <AuthModal theme={theme} onClose={() => setAuthModalOpen(false)} />
+      )}
+
+      {/* Fallback Wave Overlay for browsers without View Transitions API */}
+      {waveOverlay && (
+        <div
+          className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden"
+          style={{
+            backgroundColor: waveOverlay.color,
+            clipPath: `polygon(${generateOrganicWavePoints(
+              waveOverlay.originX,
+              waveOverlay.originY,
+              typeof window !== "undefined"
+                ? Math.hypot(window.innerWidth, window.innerHeight) * 1.8
+                : 2000,
+              1.5
+            )})`,
+            animation: "wave-fallback-expand 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+          }}
+        />
       )}
     </div>
   );
