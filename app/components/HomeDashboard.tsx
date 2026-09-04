@@ -78,23 +78,23 @@ function formatRelTime(dateStr: string): string {
 }
 
 // ─── Skeleton component ───────────────────────────────────────────────────────
-function Skeleton({ className = "" }: { className?: string }) {
+function Skeleton({ className = "", isDark = true }: { className?: string; isDark?: boolean }) {
   return (
     <div
-      className={`animate-pulse rounded-lg bg-white/5 ${className}`}
+      className={`animate-pulse rounded-lg ${isDark ? "bg-white/5" : "bg-blue-200/50"} ${className}`}
       aria-hidden="true"
     />
   );
 }
 
 // ─── Activity icon ────────────────────────────────────────────────────────────
-function ActivityIcon({ type }: { type: ActivityType }) {
+function ActivityIcon({ type, isDark = true }: { type: ActivityType; isDark?: boolean }) {
   const base =
     "flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center";
 
   if (type === "ALERT_SHARED") {
     return (
-      <span className={`${base} bg-blue-500/15`}>
+      <span className={`${base} ${isDark ? "bg-blue-500/15" : "bg-white border border-blue-200/80 shadow-2xs"}`}>
         <svg
           className="w-4 h-4 text-[#1D68FF]"
           viewBox="0 0 24 24"
@@ -111,9 +111,9 @@ function ActivityIcon({ type }: { type: ActivityType }) {
   }
   if (type === "ALERT_CONFIRMED") {
     return (
-      <span className={`${base} bg-emerald-500/15`}>
+      <span className={`${base} ${isDark ? "bg-emerald-500/15" : "bg-white border border-emerald-200/80 shadow-2xs"}`}>
         <svg
-          className="w-4 h-4 text-emerald-400"
+          className={`w-4 h-4 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -128,9 +128,9 @@ function ActivityIcon({ type }: { type: ActivityType }) {
   }
   if (type === "MEMBER_JOINED") {
     return (
-      <span className={`${base} bg-violet-500/15`}>
+      <span className={`${base} ${isDark ? "bg-violet-500/15" : "bg-white border border-violet-200/80 shadow-2xs"}`}>
         <svg
-          className="w-4 h-4 text-violet-400"
+          className={`w-4 h-4 ${isDark ? "text-violet-400" : "text-violet-600"}`}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -148,9 +148,9 @@ function ActivityIcon({ type }: { type: ActivityType }) {
   }
   if (type === "MEMBER_LEFT") {
     return (
-      <span className={`${base} bg-slate-500/15`}>
+      <span className={`${base} ${isDark ? "bg-slate-500/15" : "bg-white border border-slate-200/80 shadow-2xs"}`}>
         <svg
-          className="w-4 h-4 text-slate-400"
+          className={`w-4 h-4 ${isDark ? "text-slate-400" : "text-slate-600"}`}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -166,9 +166,9 @@ function ActivityIcon({ type }: { type: ActivityType }) {
     );
   }
   return (
-    <span className={`${base} bg-cyan-500/15`}>
+    <span className={`${base} ${isDark ? "bg-cyan-500/15" : "bg-white border border-cyan-200/80 shadow-2xs"}`}>
       <svg
-        className="w-4 h-4 text-cyan-400"
+        className={`w-4 h-4 ${isDark ? "text-cyan-400" : "text-cyan-600"}`}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -275,7 +275,7 @@ export function HomeDashboard({
         </svg>
       ),
       gradient: "from-blue-600/20 to-blue-900/10",
-      iconBg: "bg-blue-500/10",
+      iconBg: isDark ? "bg-blue-500/10" : "bg-white border border-blue-200/80 shadow-2xs",
       iconColor: "text-[#1D68FF]",
       onClick: onNavigateToCircle,
     },
@@ -292,8 +292,8 @@ export function HomeDashboard({
         </svg>
       ),
       gradient: "from-violet-600/20 to-violet-900/10",
-      iconBg: "bg-violet-500/10",
-      iconColor: "text-violet-400",
+      iconBg: isDark ? "bg-violet-500/10" : "bg-white border border-violet-200/80 shadow-2xs",
+      iconColor: isDark ? "text-violet-400" : "text-violet-600",
       onClick: onNavigateToCircle,
     },
     {
@@ -307,8 +307,8 @@ export function HomeDashboard({
         </svg>
       ),
       gradient: "from-emerald-600/20 to-emerald-900/10",
-      iconBg: "bg-emerald-500/10",
-      iconColor: "text-emerald-400",
+      iconBg: isDark ? "bg-emerald-500/10" : "bg-white border border-emerald-200/80 shadow-2xs",
+      iconColor: isDark ? "text-emerald-400" : "text-emerald-600",
       onClick: onNavigateToCircle,
     },
     {
@@ -325,14 +325,15 @@ export function HomeDashboard({
         </svg>
       ),
       gradient: "from-amber-600/20 to-amber-900/10",
-      iconBg: "bg-amber-500/10",
-      iconColor: "text-amber-400",
+      iconBg: isDark ? "bg-amber-500/10" : "bg-white border border-amber-200/80 shadow-2xs",
+      iconColor: isDark ? "text-amber-400" : "text-amber-600",
       onClick: onNavigateToCircle,
     },
   ];
 
-  const cardBase =
-    "relative rounded-2xl border border-white/[0.07] bg-[#0D1424] shadow-xl overflow-hidden";
+  const cardBase = isDark
+    ? "relative rounded-2xl border border-white/[0.07] bg-[#0D1424] shadow-xl overflow-hidden"
+    : "relative rounded-2xl border border-blue-200/90 bg-[#EDF3FB] shadow-[0_4px_24px_rgba(30,58,138,0.07)] overflow-hidden";
 
   const visibleActivity = showAllActivity
     ? data?.recentActivity ?? []
@@ -352,34 +353,40 @@ export function HomeDashboard({
 
         {/* Welcome block */}
         <div className="flex flex-col justify-center space-y-1 py-3 px-1">
-          <p className="text-slate-400 text-sm font-medium tracking-wide">
+          <p className={`text-sm font-medium tracking-wide ${isDark ? "text-slate-400" : "text-slate-500"}`}>
             Good to see you again,
           </p>
           {loading && !data ? (
-            <Skeleton className="h-9 w-48 mt-1" />
+            <Skeleton isDark={isDark} className="h-9 w-48 mt-1" />
           ) : (
-            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            <h1 className={`text-3xl sm:text-4xl font-black tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>
               {greeting}
               <span className="ml-2 text-3xl select-none">👋</span>
             </h1>
           )}
-          <p className="text-slate-500 text-sm sm:text-base pt-1 font-medium">
+          <p className={`text-sm sm:text-base pt-1 font-medium ${isDark ? "text-slate-500" : "text-slate-600"}`}>
             Stay informed. Stay alert. Stay safer with your Circles.
           </p>
         </div>
 
         {/* Safety card */}
         <div
-          className="relative rounded-2xl overflow-hidden border border-blue-800/30 shadow-xl flex-shrink-0 min-w-0 lg:min-w-[340px] xl:min-w-[400px]"
+          className={`relative rounded-2xl overflow-hidden border flex-shrink-0 min-w-0 lg:min-w-[340px] xl:min-w-[400px] ${
+            isDark
+              ? "border-blue-800/30 shadow-xl"
+              : "border-blue-200/90 shadow-[0_4px_24px_rgba(30,58,138,0.07)]"
+          }`}
           style={{
-            background:
-              "linear-gradient(135deg, #0A1428 0%, #0D1F44 50%, #091633 100%)",
+            background: isDark
+              ? "linear-gradient(135deg, #0A1428 0%, #0D1F44 50%, #091633 100%)"
+              : "linear-gradient(135deg, #EDF3FB 0%, #E3EDFB 100%)",
           }}
         >
           {/* Subtle glow orb */}
           <div
-            className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20 pointer-events-none"
+            className="absolute top-0 right-0 w-40 h-40 rounded-full pointer-events-none"
             style={{
+              opacity: isDark ? 0.2 : 0.08,
               background:
                 "radial-gradient(circle, #1D68FF 0%, transparent 70%)",
               transform: "translate(30%, -30%)",
@@ -388,7 +395,11 @@ export function HomeDashboard({
 
           <div className="relative flex items-center gap-4 p-5 pr-6">
             {/* Shield icon */}
-            <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center shadow-lg">
+            <div className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${
+              isDark
+                ? "bg-blue-500/15 border border-blue-500/20 shadow-lg text-[#1D68FF]"
+                : "bg-white border border-blue-200/80 text-[#1D68FF] shadow-2xs"
+            }`}>
               <svg
                 className="w-6 h-6 text-[#1D68FF]"
                 viewBox="0 0 24 24"
@@ -404,14 +415,14 @@ export function HomeDashboard({
             </div>
 
             <div className="min-w-0">
-              <p className="text-white font-bold text-base sm:text-lg leading-tight">
+              <p className={`font-bold text-base sm:text-lg leading-tight ${isDark ? "text-white" : "text-slate-900"}`}>
                 A safer tomorrow
                 <br />
-                <span className="text-slate-300 font-semibold text-sm sm:text-base">
+                <span className={`font-semibold text-sm sm:text-base ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                   starts with stronger communities.
                 </span>
               </p>
-              <p className="text-slate-400 text-xs sm:text-sm mt-1.5 leading-relaxed max-w-xs">
+              <p className={`text-xs sm:text-sm mt-1.5 leading-relaxed max-w-xs ${isDark ? "text-slate-400" : "text-slate-600"}`}>
                 Your Circles detect and stop scams—keeping you and everyone around you safer.
               </p>
             </div>
@@ -426,11 +437,17 @@ export function HomeDashboard({
             key={stat.id}
             id={`dashboard-stat-${stat.id}`}
             onClick={stat.onClick}
-            className={`${cardBase} text-left group cursor-pointer transition-all duration-200 hover:border-white/[0.12] hover:-translate-y-0.5 hover:shadow-2xl active:scale-95`}
+            className={`${cardBase} text-left group cursor-pointer transition-all duration-200 ${
+              isDark
+                ? "hover:border-white/[0.12] hover:shadow-2xl"
+                : "hover:border-[#1D68FF]/60 hover:shadow-[0_8px_30px_rgba(29,104,255,0.12)]"
+            } hover:-translate-y-0.5 active:scale-95`}
           >
-            <div
-              className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-60`}
-            />
+            {isDark && (
+              <div
+                className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-60`}
+              />
+            )}
             <div className="relative p-4 sm:p-5">
               <div className="flex items-start justify-between">
                 <div
@@ -439,7 +456,11 @@ export function HomeDashboard({
                   {stat.icon}
                 </div>
                 <svg
-                  className="w-4 h-4 text-slate-600 group-hover:text-slate-400 transition-colors mt-0.5"
+                  className={`w-4 h-4 transition-colors mt-0.5 ${
+                    isDark
+                      ? "text-slate-600 group-hover:text-slate-400"
+                      : "text-slate-400 group-hover:text-slate-600"
+                  }`}
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -453,16 +474,16 @@ export function HomeDashboard({
 
               <div className="mt-3">
                 {loading && !data ? (
-                  <Skeleton className="h-8 w-12 mb-1" />
+                  <Skeleton isDark={isDark} className="h-8 w-12 mb-1" />
                 ) : (
-                  <span className="text-3xl sm:text-4xl font-black text-white leading-none">
+                  <span className={`text-3xl sm:text-4xl font-black leading-none ${isDark ? "text-white" : "text-slate-900"}`}>
                     {stat.value.toLocaleString()}
                   </span>
                 )}
-                <p className="text-white font-semibold text-sm mt-1">
+                <p className={`font-semibold text-sm mt-1 ${isDark ? "text-white" : "text-slate-800"}`}>
                   {stat.label}
                 </p>
-                <p className="text-slate-500 text-xs mt-0.5">{stat.sub}</p>
+                <p className={`text-xs mt-0.5 ${isDark ? "text-slate-500" : "text-slate-500"}`}>{stat.sub}</p>
               </div>
             </div>
           </button>
@@ -477,18 +498,20 @@ export function HomeDashboard({
           <div className="flex items-center justify-between mb-5">
             <div>
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                  <svg className="w-3.5 h-3.5 text-[#1D68FF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                  isDark ? "bg-blue-500/10 text-[#1D68FF]" : "bg-white border border-blue-200/80 text-[#1D68FF] shadow-2xs"
+                }`}>
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="20" x2="18" y2="10" />
                     <line x1="12" y1="20" x2="12" y2="4" />
                     <line x1="6" y1="20" x2="6" y2="14" />
                   </svg>
                 </div>
-                <h2 className="text-white font-bold text-base sm:text-lg">
+                <h2 className={`font-bold text-base sm:text-lg ${isDark ? "text-white" : "text-slate-900"}`}>
                   Top Scam Categories
                 </h2>
               </div>
-              <p className="text-slate-500 text-xs sm:text-sm mt-0.5 ml-9">
+              <p className={`text-xs sm:text-sm mt-0.5 ml-9 ${isDark ? "text-slate-500" : "text-slate-500"}`}>
                 Most reported types across your Circles
               </p>
             </div>
@@ -499,15 +522,15 @@ export function HomeDashboard({
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="h-4 w-36" />
-                  <Skeleton className="h-3 flex-1" />
-                  <Skeleton className="h-4 w-6" />
+                  <Skeleton isDark={isDark} className="h-4 w-36" />
+                  <Skeleton isDark={isDark} className="h-3 flex-1" />
+                  <Skeleton isDark={isDark} className="h-4 w-6" />
                 </div>
               ))}
             </div>
           ) : error ? (
             <div className="text-center py-8">
-              <p className="text-slate-400 text-sm">Failed to load categories.</p>
+              <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}>Failed to load categories.</p>
               <button
                 onClick={fetchDashboard}
                 className="text-[#1D68FF] text-sm font-semibold mt-2 hover:underline cursor-pointer"
@@ -517,13 +540,15 @@ export function HomeDashboard({
             </div>
           ) : data && data.topCategories.length === 0 ? (
             <div className="text-center py-10">
-              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                isDark ? "bg-blue-500/10" : "bg-white border border-blue-200/80 shadow-2xs"
+              }`}>
+                <svg className={`w-6 h-6 ${isDark ? "text-slate-500" : "text-slate-400"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
               </div>
-              <p className="text-slate-400 text-sm font-medium">No scam insights yet</p>
-              <p className="text-slate-600 text-xs mt-1">Share a report in one of your Circles to see category trends.</p>
+              <p className={`text-sm font-medium ${isDark ? "text-slate-400" : "text-slate-700"}`}>No scam insights yet</p>
+              <p className={`text-xs mt-1 ${isDark ? "text-slate-600" : "text-slate-500"}`}>Share a report in one of your Circles to see category trends.</p>
               <button
                 onClick={onNavigateToAnalyse}
                 className="mt-3 text-[#1D68FF] text-xs font-semibold hover:underline cursor-pointer"
@@ -542,13 +567,17 @@ export function HomeDashboard({
                   <div key={cat.name} className="flex items-center gap-3 group">
                     {/* Category label */}
                     <div className="w-36 sm:w-44 flex-shrink-0">
-                      <span className="text-slate-300 text-xs sm:text-sm font-medium leading-tight line-clamp-1">
+                      <span className={`text-xs sm:text-sm font-medium leading-tight line-clamp-1 ${
+                        isDark ? "text-slate-300" : "text-slate-800"
+                      }`}>
                         {cat.name}
                       </span>
                     </div>
 
                     {/* Bar track */}
-                    <div className="flex-1 h-2.5 rounded-full bg-white/5 overflow-hidden">
+                    <div className={`flex-1 h-2.5 rounded-full overflow-hidden ${
+                      isDark ? "bg-white/5" : "bg-blue-200/40"
+                    }`}>
                       <div
                         className="h-full rounded-full transition-all duration-700 ease-out"
                         style={{
@@ -560,7 +589,9 @@ export function HomeDashboard({
                     </div>
 
                     {/* Count */}
-                    <span className="text-slate-400 text-xs font-semibold w-6 text-right tabular-nums flex-shrink-0">
+                    <span className={`text-xs font-semibold w-6 text-right tabular-nums flex-shrink-0 ${
+                      isDark ? "text-slate-400" : "text-slate-600"
+                    }`}>
                       {cat.count}
                     </span>
                   </div>
@@ -587,12 +618,14 @@ export function HomeDashboard({
         <div className={`${cardBase} p-5 sm:p-6 flex flex-col`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                <svg className="w-3.5 h-3.5 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                isDark ? "bg-violet-500/10 text-violet-400" : "bg-white border border-violet-200/80 text-violet-600 shadow-2xs"
+              }`}>
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                 </svg>
               </div>
-              <h2 className="text-white font-bold text-base sm:text-lg">
+              <h2 className={`font-bold text-base sm:text-lg ${isDark ? "text-white" : "text-slate-900"}`}>
                 My Activity
               </h2>
             </div>
@@ -612,47 +645,55 @@ export function HomeDashboard({
               <div className="space-y-4">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <Skeleton className="w-9 h-9 rounded-xl flex-shrink-0" />
+                    <Skeleton isDark={isDark} className="w-9 h-9 rounded-xl flex-shrink-0" />
                     <div className="flex-1 space-y-1.5">
-                      <Skeleton className="h-3 w-28" />
-                      <Skeleton className="h-3 w-44" />
+                      <Skeleton isDark={isDark} className="h-3 w-28" />
+                      <Skeleton isDark={isDark} className="h-3 w-44" />
                     </div>
-                    <Skeleton className="h-3 w-12 flex-shrink-0" />
+                    <Skeleton isDark={isDark} className="h-3 w-12 flex-shrink-0" />
                   </div>
                 ))}
               </div>
             ) : error ? (
               <div className="text-center py-6">
-                <p className="text-slate-400 text-sm">Failed to load activity.</p>
+                <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}>Failed to load activity.</p>
               </div>
             ) : visibleActivity.length === 0 ? (
               <div className="text-center py-10">
-                <div className="w-12 h-12 rounded-full bg-violet-500/10 flex items-center justify-center mx-auto mb-3">
-                  <svg className="w-6 h-6 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                  isDark ? "bg-violet-500/10" : "bg-white border border-violet-200/80 shadow-2xs"
+                }`}>
+                  <svg className={`w-6 h-6 ${isDark ? "text-slate-500" : "text-slate-400"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                   </svg>
                 </div>
-                <p className="text-slate-400 text-sm font-medium">No recent activity</p>
-                <p className="text-slate-600 text-xs mt-1">Activity will appear here as your Circles stay active.</p>
+                <p className={`text-sm font-medium ${isDark ? "text-slate-400" : "text-slate-700"}`}>No recent activity</p>
+                <p className={`text-xs mt-1 ${isDark ? "text-slate-600" : "text-slate-500"}`}>Activity will appear here as your Circles stay active.</p>
               </div>
             ) : (
-              <div className="divide-y divide-white/[0.04]">
+              <div className={`divide-y ${isDark ? "divide-white/[0.04]" : "divide-blue-200/60"}`}>
                 {visibleActivity.map((act, idx) => (
                   <div
                     key={act.id}
                     className="flex items-start gap-3 py-3 first:pt-0 last:pb-0 group"
                     style={{ animationDelay: `${idx * 50}ms` }}
                   >
-                    <ActivityIcon type={act.type} />
+                    <ActivityIcon type={act.type} isDark={isDark} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-white text-xs sm:text-sm font-semibold leading-tight truncate">
+                      <p className={`text-xs sm:text-sm font-semibold leading-tight truncate ${
+                        isDark ? "text-white" : "text-slate-900"
+                      }`}>
                         {act.title}
                       </p>
-                      <p className="text-slate-500 text-xs mt-0.5 leading-snug line-clamp-2">
+                      <p className={`text-xs mt-0.5 leading-snug line-clamp-2 ${
+                        isDark ? "text-slate-500" : "text-slate-600"
+                      }`}>
                         {act.desc}
                       </p>
                     </div>
-                    <span className="text-slate-600 text-xs flex-shrink-0 pt-0.5 tabular-nums">
+                    <span className={`text-xs flex-shrink-0 pt-0.5 tabular-nums ${
+                      isDark ? "text-slate-600" : "text-slate-400"
+                    }`}>
                       {formatRelTime(act.timestamp)}
                     </span>
                   </div>
@@ -664,7 +705,9 @@ export function HomeDashboard({
           {!loading && !error && (data?.recentActivity?.length ?? 0) > 0 && (
             <button
               onClick={onNavigateToCircle}
-              className="mt-4 pt-4 border-t border-white/[0.05] flex items-center gap-1.5 text-[#1D68FF] text-xs font-semibold hover:gap-2 transition-all cursor-pointer group w-full"
+              className={`mt-4 pt-4 border-t flex items-center gap-1.5 text-[#1D68FF] text-xs font-semibold hover:gap-2 transition-all cursor-pointer group w-full ${
+                isDark ? "border-white/[0.05]" : "border-blue-200/60"
+              }`}
             >
               <span>Open My Circle</span>
               <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -678,16 +721,22 @@ export function HomeDashboard({
 
       {/* ── Row 4: Your Circles ────────────────────────────────────────────── */}
       <div
-        className="relative rounded-2xl overflow-hidden border border-white/[0.07] shadow-xl"
+        className={`relative rounded-2xl overflow-hidden border ${
+          isDark
+            ? "border-white/[0.07] shadow-xl"
+            : "border-blue-200/90 shadow-[0_4px_24px_rgba(30,58,138,0.07)]"
+        }`}
         style={{
-          background:
-            "linear-gradient(135deg, #090F1E 0%, #0D1530 55%, #08111F 100%)",
+          background: isDark
+            ? "linear-gradient(135deg, #090F1E 0%, #0D1530 55%, #08111F 100%)"
+            : "linear-gradient(135deg, #EDF3FB 0%, #E3EDFB 100%)",
         }}
       >
         {/* Decorative glow */}
         <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 opacity-10 pointer-events-none"
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 pointer-events-none"
           style={{
+            opacity: isDark ? 0.1 : 0.05,
             background:
               "radial-gradient(ellipse, #1D68FF 0%, transparent 70%)",
           }}
@@ -697,7 +746,11 @@ export function HomeDashboard({
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center shadow-lg flex-shrink-0">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                isDark
+                  ? "bg-blue-500/15 border border-blue-500/20 shadow-lg text-[#1D68FF]"
+                  : "bg-white border border-blue-200/80 text-[#1D68FF] shadow-2xs"
+              }`}>
                 <svg
                   className="w-5 h-5 text-[#1D68FF]"
                   viewBox="0 0 24 24"
@@ -714,10 +767,10 @@ export function HomeDashboard({
                 </svg>
               </div>
               <div>
-                <h2 className="text-white font-bold text-base sm:text-xl">
+                <h2 className={`font-bold text-base sm:text-xl ${isDark ? "text-white" : "text-slate-900"}`}>
                   Your Circles
                 </h2>
-                <p className="text-slate-500 text-xs sm:text-sm">
+                <p className={`text-xs sm:text-sm ${isDark ? "text-slate-500" : "text-slate-500"}`}>
                   Stronger together against scams
                 </p>
               </div>
@@ -748,12 +801,12 @@ export function HomeDashboard({
           {loading && !data ? (
             <div className="flex gap-3">
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-24 flex-1 rounded-xl" />
+                <Skeleton key={i} isDark={isDark} className="h-24 flex-1 rounded-xl" />
               ))}
             </div>
           ) : error ? (
             <div className="text-center py-6">
-              <p className="text-slate-400 text-sm">Failed to load your Circles.</p>
+              <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-600"}`}>Failed to load your Circles.</p>
               <button
                 onClick={fetchDashboard}
                 className="text-[#1D68FF] text-sm font-semibold mt-1 hover:underline cursor-pointer"
@@ -763,18 +816,20 @@ export function HomeDashboard({
             </div>
           ) : data && data.circles.length === 0 ? (
             <div className="text-center py-8">
-              <div className="w-14 h-14 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-3">
-                <svg className="w-7 h-7 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                isDark ? "bg-blue-500/10 border border-blue-500/20" : "bg-white border border-blue-200/80 shadow-2xs"
+              }`}>
+                <svg className={`w-7 h-7 ${isDark ? "text-slate-500" : "text-slate-400"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                   <circle cx="9" cy="7" r="4" />
                   <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                   <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
               </div>
-              <p className="text-slate-300 font-semibold text-sm">
-                You're not in any Circles yet
+              <p className={`font-semibold text-sm ${isDark ? "text-slate-300" : "text-slate-800"}`}>
+                You&apos;re not in any Circles yet
               </p>
-              <p className="text-slate-500 text-xs mt-1 max-w-xs mx-auto">
+              <p className={`text-xs mt-1 max-w-xs mx-auto ${isDark ? "text-slate-500" : "text-slate-600"}`}>
                 Join or create a Circle to build community scam protection with people you trust.
               </p>
               <button
@@ -792,22 +847,28 @@ export function HomeDashboard({
                   <button
                     key={circle.id}
                     onClick={onNavigateToCircle}
-                    className="flex items-center gap-3 p-3.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.06] hover:border-white/[0.12] transition-all cursor-pointer group text-left active:scale-95"
+                    className={`flex items-center gap-3 p-3.5 rounded-xl border transition-all cursor-pointer group text-left active:scale-95 ${
+                      isDark
+                        ? "bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.06] hover:border-white/[0.12]"
+                        : "bg-white hover:bg-white/80 border-blue-200/80 hover:border-blue-300 shadow-xs"
+                    }`}
                   >
                     <CircleAvatar name={circle.name} size="md" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-semibold text-sm leading-tight truncate group-hover:text-[#1D68FF] transition-colors">
+                      <p className={`font-semibold text-sm leading-tight truncate group-hover:text-[#1D68FF] transition-colors ${
+                        isDark ? "text-white" : "text-slate-900"
+                      }`}>
                         {circle.name}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-slate-500 text-xs">
+                        <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-600"}`}>
                           {circle.memberCount}{" "}
                           {circle.memberCount === 1 ? "member" : "members"}
                         </span>
                         {circle.reportCount > 0 && (
                           <>
-                            <span className="text-slate-700 text-xs">·</span>
-                            <span className="text-slate-500 text-xs">
+                            <span className={`text-xs ${isDark ? "text-slate-700" : "text-slate-300"}`}>·</span>
+                            <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-600"}`}>
                               {circle.reportCount}{" "}
                               {circle.reportCount === 1 ? "report" : "reports"}
                             </span>
@@ -816,7 +877,9 @@ export function HomeDashboard({
                       </div>
                     </div>
                     {circle.role === "admin" && (
-                      <span className="flex-shrink-0 px-2 py-0.5 rounded-full bg-blue-500/15 text-[#1D68FF] text-[10px] font-bold">
+                      <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        isDark ? "bg-blue-500/15 text-[#1D68FF]" : "bg-blue-100 border border-blue-200/80 text-[#1D68FF]"
+                      }`}>
                         Admin
                       </span>
                     )}
@@ -826,7 +889,9 @@ export function HomeDashboard({
 
               {/* Summary row */}
               {(data?.circles?.length ?? 0) > 0 && (
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 pt-4 border-t border-white/[0.05]">
+                <div className={`flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 pt-4 border-t ${
+                  isDark ? "border-white/[0.05]" : "border-blue-200/60"
+                }`}>
                   <div className="flex items-center gap-1.5">
                     <svg className="w-4 h-4 text-[#1D68FF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -834,8 +899,8 @@ export function HomeDashboard({
                       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
-                    <span className="text-slate-400 text-xs">
-                      <span className="text-white font-bold">{data?.groupCount}</span>{" "}
+                    <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                      <span className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{data?.groupCount}</span>{" "}
                       {(data?.groupCount ?? 0) === 1 ? "Circle" : "Circles"}
                     </span>
                   </div>
@@ -844,8 +909,8 @@ export function HomeDashboard({
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                       <circle cx="9" cy="7" r="4" />
                     </svg>
-                    <span className="text-slate-400 text-xs">
-                      <span className="text-white font-bold">{data?.uniqueMemberCount}</span>{" "}
+                    <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                      <span className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{data?.uniqueMemberCount}</span>{" "}
                       unique members
                     </span>
                   </div>
@@ -854,8 +919,8 @@ export function HomeDashboard({
                       <svg className="w-4 h-4 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                       </svg>
-                      <span className="text-slate-400 text-xs">
-                        <span className="text-white font-bold">
+                      <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                        <span className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
                           {data?.circles.reduce((s, c) => s + c.reportCount, 0)}
                         </span>{" "}
                         threats tracked
@@ -870,12 +935,20 @@ export function HomeDashboard({
       </div>
 
       {/* ── Row 5: Analyse CTA ─────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-[#0D1424] overflow-hidden">
+      <div className={`rounded-2xl border overflow-hidden ${
+        isDark
+          ? "border-white/[0.07] bg-[#0D1424] shadow-xl"
+          : "border-blue-200/90 bg-[#EDF3FB] shadow-[0_4px_24px_rgba(30,58,138,0.07)]"
+      }`}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 sm:p-6">
           <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-2xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+              isDark
+                ? "bg-blue-500/15 border border-blue-500/20 text-[#1D68FF]"
+                : "bg-white border border-blue-200/80 text-[#1D68FF] shadow-2xs"
+            }`}>
               <svg
-                className="w-5 h-5 text-[#1D68FF]"
+                className="w-5 h-5"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -889,10 +962,10 @@ export function HomeDashboard({
               </svg>
             </div>
             <div>
-              <p className="text-white font-bold text-base sm:text-lg leading-tight">
+              <p className={`font-bold text-base sm:text-lg leading-tight ${isDark ? "text-white" : "text-slate-900"}`}>
                 Spot a scam? Analyse it now.
               </p>
-              <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
+              <p className={`text-xs sm:text-sm mt-0.5 ${isDark ? "text-slate-500" : "text-slate-600"}`}>
                 Check messages, links, images or voice notes with AI before you take any action.
               </p>
             </div>

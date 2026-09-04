@@ -190,14 +190,14 @@ export default function NotificationPopover({
           className={`absolute right-0 mt-3 w-80 sm:w-96 rounded-2xl shadow-2xl border origin-top-right z-50 overflow-hidden flex flex-col ${
             isDark
               ? "bg-[#111625] border-slate-800/80 shadow-black/50"
-              : "bg-white border-slate-200 shadow-slate-200/50"
+              : "bg-[#EDF3FB] border-blue-200/90 shadow-[0_8px_30px_rgba(30,58,138,0.14)]"
           }`}
           style={{ maxHeight: "calc(100vh - 100px)", minHeight: "200px" }}
         >
           {/* Header */}
           <div
             className={`flex items-center justify-between px-4 py-3 border-b ${
-              isDark ? "border-slate-800/80" : "border-slate-100"
+              isDark ? "border-slate-800/80" : "border-blue-200/70"
             }`}
           >
             <h3 className={`font-bold text-sm ${isDark ? "text-white" : "text-slate-900"}`}>
@@ -219,10 +219,10 @@ export default function NotificationPopover({
               <div className="p-4 space-y-4">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="flex gap-3 animate-pulse">
-                    <div className={`w-8 h-8 rounded-full ${isDark ? "bg-slate-800" : "bg-slate-200"}`} />
+                    <div className={`w-8 h-8 rounded-full ${isDark ? "bg-slate-800" : "bg-blue-200/60"}`} />
                     <div className="flex-1 space-y-2 py-1">
-                      <div className={`h-3 w-3/4 rounded ${isDark ? "bg-slate-800" : "bg-slate-200"}`} />
-                      <div className={`h-2.5 w-1/2 rounded ${isDark ? "bg-slate-800" : "bg-slate-200"}`} />
+                      <div className={`h-3 w-3/4 rounded ${isDark ? "bg-slate-800" : "bg-blue-200/60"}`} />
+                      <div className={`h-2.5 w-1/2 rounded ${isDark ? "bg-slate-800" : "bg-blue-200/60"}`} />
                     </div>
                   </div>
                 ))}
@@ -231,22 +231,22 @@ export default function NotificationPopover({
               <div className="px-6 py-12 text-center flex flex-col items-center justify-center">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
-                    isDark ? "bg-slate-800/50 text-slate-500" : "bg-slate-50 text-slate-400"
+                    isDark ? "bg-slate-800/50 text-slate-500" : "bg-white border border-blue-200/80 text-slate-400 shadow-2xs"
                   }`}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className={`text-sm font-semibold ${isDark ? "text-slate-300" : "text-slate-700"}`}>
-                  You're all caught up
+                <p className={`text-sm font-semibold ${isDark ? "text-slate-300" : "text-slate-800"}`}>
+                  You&apos;re all caught up
                 </p>
                 <p className={`text-[13px] mt-1 ${isDark ? "text-slate-500" : "text-slate-500"}`}>
                   No new Circle activity yet.
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
+              <div className={`divide-y ${isDark ? "divide-slate-800/50" : "divide-blue-200/60"}`}>
                 {notifications.map((notif) => (
                   <div
                     key={notif.id}
@@ -255,10 +255,10 @@ export default function NotificationPopover({
                       notif.is_read
                         ? isDark
                           ? "hover:bg-white/[0.02]"
-                          : "hover:bg-slate-50"
+                          : "hover:bg-blue-100/40"
                         : isDark
                         ? "bg-[#1D68FF]/5 hover:bg-[#1D68FF]/10"
-                        : "bg-blue-50/50 hover:bg-blue-50"
+                        : "bg-white/60 hover:bg-white/90"
                     }`}
                   >
                     <div className="flex-shrink-0 mt-0.5 text-lg">
@@ -271,7 +271,7 @@ export default function NotificationPopover({
                             notif.is_read
                               ? isDark
                                 ? "text-slate-300 font-medium"
-                                : "text-slate-700 font-medium"
+                                : "text-slate-800 font-medium"
                               : isDark
                               ? "text-white font-bold"
                               : "text-slate-900 font-bold"

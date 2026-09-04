@@ -128,7 +128,7 @@ export function AudioInput({ onAudioReady, onError }: AudioInputProps) {
         <input
           type="file"
           ref={fileInputRef}
-          accept="audio/*,.mp3,.mpeg,.wav,.m4a,.ogg,.webm,.aac"
+          accept="audio/*,.mp3,.mpeg,.wav,.m4a,.ogg,.webm,.aac,.flac"
           onChange={handleFileChange}
           className="hidden"
         />
@@ -152,7 +152,7 @@ export function AudioInput({ onAudioReady, onError }: AudioInputProps) {
         ) : (
           <div className="flex flex-col items-center justify-center gap-1.5 text-slate-300 text-sm">
             <span className="font-semibold block text-base text-white">Click to browse or drag a voice note / call audio here</span>
-            <span className="text-xs text-slate-400">Supported: MP3, WAV, M4A, OGG, WEBM, AAC (Max 2.5MB)</span>
+            <span className="text-xs text-slate-400">Supported: MP3, WAV, M4A, OGG, WEBM, AAC, FLAC (Max 2.5MB)</span>
           </div>
         )}
       </div>
