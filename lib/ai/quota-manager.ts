@@ -1,7 +1,7 @@
 /**
  * lib/ai/quota-manager.ts
  *
- * Atomic pre-call quota reservation for the Scam Shield AI resilience subsystem.
+ * Atomic pre-call quota reservation for the Kinkeeper AI resilience subsystem.
  *
  * Enforces per-model RPM and RPD limits using Redis Lua scripts to guarantee
  * atomicity under concurrent requests.

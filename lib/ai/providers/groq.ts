@@ -1,7 +1,7 @@
 /**
  * lib/ai/providers/groq.ts
  *
- * Groq provider adapter for the Scam Shield AI resilience subsystem.
+ * Groq provider adapter for the Kinkeeper AI resilience subsystem.
  *
  * Uses native fetch — no new dependencies beyond what is already in package.json.
  * Endpoint: https://api.groq.com/openai/v1/chat/completions

@@ -1,7 +1,7 @@
 /**
  * lib/ai/providers/gemini.ts
  *
- * Gemini provider adapter for the Scam Shield AI resilience subsystem.
+ * Gemini provider adapter for the Kinkeeper AI resilience subsystem.
  *
  * Uses the existing @google/genai SDK (already in package.json).
  * Wraps the three call types: scam analysis, OCR, and audio transcription.

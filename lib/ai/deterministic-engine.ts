@@ -1,7 +1,7 @@
 /**
  * lib/ai/deterministic-engine.ts
  *
- * Reusable Rule-Based Deterministic Fallback Engine for Scam Shield.
+ * Reusable Rule-Based Deterministic Fallback Engine for Kinkeeper.
  *
  * Responsibilities:
  *   1. Evaluates fast heuristic signals directly from normalized text:
@@ -322,7 +322,7 @@ async function checkSafeBrowsing(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client: { clientId: "scam-shield", clientVersion: "1.0.0" },
+          client: { clientId: "kinkeeper", clientVersion: "1.0.0" },
           threatInfo: {
             threatTypes: ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE"],
             platformTypes: ["ANY_PLATFORM"],

@@ -1,7 +1,7 @@
 /**
  * lib/ai/circuit-breaker.ts
  *
- * Redis-backed circuit breaker for the Scam Shield AI resilience subsystem.
+ * Redis-backed circuit breaker for the Kinkeeper AI resilience subsystem.
  *
  * STATE MACHINE:
  *

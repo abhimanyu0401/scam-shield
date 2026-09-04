@@ -1,7 +1,7 @@
 /**
  * scripts/test-notifications-e2e.ts
  *
- * Comprehensive end-to-end verification script for Scam Shield notifications
+ * Comprehensive end-to-end verification script for Kinkeeper notifications
  * using real authenticated Supabase accounts:
  *   - Alice (fd4019f1-c800-439a-8782-c8f83d0bd68e)
  *   - Bob   (7fe7fc29-71a6-4270-af3d-1fb7e0b2a4ee)
@@ -52,7 +52,7 @@ async function getAuthClient(email: string, pass: string = "Password123!") {
 
 async function runTests() {
   console.log("==================================================================");
-  console.log("SCAM SHIELD NOTIFICATION SYSTEM — END-TO-END VERIFICATION");
+  console.log("KINKEEPER NOTIFICATION SYSTEM — END-TO-END VERIFICATION");
   console.log("==================================================================\n");
 
   // 1. Authenticate real users

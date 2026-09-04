@@ -3,7 +3,7 @@
 /**
  * lib/hooks/useLiveNotifications.ts
  *
- * Single client-side source of truth for Scam Shield notifications:
+ * Single client-side source of truth for Kinkeeper notifications:
  *  - Live notification list & unread count
  *  - Smart background polling (active tab: 20s, background tab: 60s)
  *  - Baseline initialization (existing notifications do NOT fire popups)
@@ -182,7 +182,7 @@ export function useLiveNotifications({
           for (const notif of genuinelyNew.slice(0, MAX_VISIBLE_TOASTS)) {
             try {
               const osNotif = new window.Notification(
-                `Scam Shield: ${notif.title}`,
+                `Kinkeeper: ${notif.title}`,
                 {
                   body: notif.message,
                   icon: "/assets/Dark.png",

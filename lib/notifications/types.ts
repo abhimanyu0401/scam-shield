@@ -1,7 +1,7 @@
 /**
  * lib/notifications/types.ts
  *
- * Strongly typed notification event model for Scam Shield.
+ * Strongly typed notification event model for Kinkeeper.
  *
  * These notification types map to real Circle/application events.
  * New types should only be added when a corresponding backend mutation exists.

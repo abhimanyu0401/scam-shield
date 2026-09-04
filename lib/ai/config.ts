@@ -2,7 +2,7 @@
  * lib/ai/config.ts
  *
  * Model registry, deadline constants, and circuit-breaker configuration
- * for the Scam Shield AI resilience subsystem.
+ * for the Kinkeeper AI resilience subsystem.
  *
  * Design rules:
  *   - This is the ONLY place model IDs, timeouts, quotas, and capabilities
@@ -129,7 +129,7 @@ export interface ModelDefinition {
 // ---------------------------------------------------------------------------
 
 /**
- * The authoritative ordered fallback hierarchy for Scam Shield production.
+ * The authoritative ordered fallback hierarchy for Kinkeeper production.
  *
  * Evaluation order: priority 1 → 2 → 3 → 4.
  *

@@ -1,7 +1,7 @@
 /**
  * lib/ai/schema-validator.ts
  *
- * Strict server-side validator for the Scam Shield AI response schema.
+ * Strict server-side validator for the Kinkeeper AI response schema.
  *
  * Responsibilities:
  *   - Parses the raw JSON string from any AI provider.

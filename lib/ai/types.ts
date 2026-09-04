@@ -1,7 +1,7 @@
 /**
  * lib/ai/types.ts
  *
- * Core shared contracts for the Scam Shield AI resilience subsystem.
+ * Core shared contracts for the Kinkeeper AI resilience subsystem.
  *
  * Design rules:
  *   - No runtime side-effects — pure type declarations only.

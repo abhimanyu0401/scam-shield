@@ -1,4 +1,4 @@
-# Scam Shield — Project Roadmap & Technical Specification
+# Kinkeeper — Project Roadmap & Technical Specification
 
 **Problem Statement:** Bharat Pragati PS1 — AI Deepfake & Scam Detection  
 **Status:** Finals-Ready Build Completed & Verified  
@@ -7,9 +7,9 @@
 
 ## 1. Executive Summary & Vision
 
-Scam Shield is an AI-powered citizen protection platform engineered to detect and disrupt scam operations across India. It addresses fraudulent messages, deceptive screenshots, and impersonation voice notes by synthesizing rule-based heuristics, real-time threat intelligence, semantic vector pattern matching, and multi-model LLM reasoning into an immediate risk assessment.
+Kinkeeper is an AI-powered citizen protection platform engineered to detect and disrupt scam operations across India. It addresses fraudulent messages, deceptive screenshots, and impersonation voice notes by synthesizing rule-based heuristics, real-time threat intelligence, semantic vector pattern matching, and multi-model LLM reasoning into an immediate risk assessment.
 
-Beyond individual checks, Scam Shield introduces **Scam Radar** and **Trust Circles** — enabling families, societies, and peer groups to share warnings, aggregate semantically identical scam variants, and confirm community threats in real time.
+Beyond individual checks, Kinkeeper introduces **Scam Radar** and **Trust Circles** — enabling families, societies, and peer groups to share warnings, aggregate semantically identical scam variants, and confirm community threats in real time.
 
 ---
 
