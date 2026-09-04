@@ -1,7 +1,7 @@
 /**
  * lib/ai/normalizer.ts
  *
- * Request Normalization & Multimodal Convergence Layer for Scam Shield.
+ * Request Normalization & Multimodal Convergence Layer for Kinkeeper.
  *
  * Responsibilities:
  *   1. Accepts raw incoming request payloads across all supported modalities:

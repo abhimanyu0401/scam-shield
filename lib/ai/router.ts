@@ -1,7 +1,7 @@
 /**
  * lib/ai/router.ts
  *
- * Adaptive AI Model Router & Orchestration Layer for Scam Shield.
+ * Adaptive AI Model Router & Orchestration Layer for Kinkeeper.
  *
  * Responsibilities:
  *   1. Model registry & capability routing (via getEligibleModels from config.ts).

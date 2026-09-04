@@ -24,7 +24,7 @@ function assert(condition: boolean, description: string) {
 }
 
 console.log("==================================================================");
-console.log("SCAM SHIELD — THEME, FLAC & REPOSITORY HYGIENE VERIFICATION");
+console.log("KINKEEPER — THEME, FLAC & REPOSITORY HYGIENE VERIFICATION");
 console.log("==================================================================\n");
 
 // -----------------------------------------------------------------------------

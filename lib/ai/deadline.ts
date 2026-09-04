@@ -1,7 +1,7 @@
 /**
  * lib/ai/deadline.ts
  *
- * Global AI orchestration deadline tracker for the Scam Shield resilience subsystem.
+ * Global AI orchestration deadline tracker for the Kinkeeper resilience subsystem.
  *
  * CRITICAL SEMANTICS:
  *   The deadline is an ABSOLUTE TIMESTAMP — not a sum of model timeouts.

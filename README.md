@@ -1,4 +1,4 @@
-# Scam Shield 🛡️
+# Kinkeeper 🛡️
 
 An AI-powered citizen protection platform that instantly checks suspicious messages, screenshots, and audio recordings for scam red flags — combining deterministic rules, live threat intelligence, semantic vector clustering, and multi-model LLM reasoning into a single risk score, plain-language explanation, and ready-to-file complaint draft.
 
@@ -55,7 +55,7 @@ Scam Radar groups incoming scam reports to show community members how widespread
 
 ## Circle Synchronization & Real-Time Flow
 
-Scam Shield implements automatic, client-synchronized UI state:
+Kinkeeper implements automatic, client-synchronized UI state:
 
 - **Automatic Feed Updates:** When a report is submitted or shared, the Circle feed updates automatically without requiring a manual page refresh.
 - **Community Confirmations:** Upvoting ("Confirm") or downvoting ("Deny") updates vote counts in both the active feed and open detail modals.

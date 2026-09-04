@@ -20,7 +20,7 @@ const bebasNeue = Bebas_Neue({
 });
 
 export const metadata: Metadata = {
-  title: "Scam Shield — AI Scam Detector",
+  title: "Kinkeeper — AI Scam Detector",
   description:
     "Paste any suspicious message and instantly get a risk score, red flags, and a plain-language explanation powered by AI.",
 };

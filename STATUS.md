@@ -1,4 +1,4 @@
-# Scam Shield — Engineering & Hackathon Status Report
+# Kinkeeper — Engineering & Hackathon Status Report
 
 **Last Updated:** September 3, 2026  
 **Build Target:** Bharat Pragati PS1 — AI Deepfake & Scam Detection (Finals Round)  

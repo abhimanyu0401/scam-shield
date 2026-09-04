@@ -878,11 +878,11 @@ export default function Home() {
             <button
               onClick={() => handleNavClick("home")}
               className="cursor-pointer focus:outline-none flex items-center"
-              aria-label="Scam Shield Home"
+              aria-label="Kinkeeper Home"
             >
               <img
                 src={isDark ? "/assets/Dark.png" : "/assets/LIGHT1.png"}
-                alt="Scam Shield"
+                alt="Kinkeeper"
                 className="h-12 sm:h-14 md:h-16 lg:h-[68px] xl:h-[76px] w-auto object-contain transition-all duration-200"
               />
             </button>
@@ -1234,7 +1234,7 @@ export default function Home() {
 
                   {/* Description */}
                   <p className={`text-base sm:text-lg md:text-xl lg:text-[21px] leading-relaxed max-w-2xl ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-                    Scam Shield uses multi-signal AI to detect and analyze suspicious messages, links, images and voice notes before you fall victim.
+                    Kinkeeper uses multi-signal AI to detect and analyze suspicious messages, links, images and voice notes before you fall victim.
                   </p>
 
                   {/* Dual Action Buttons */}
@@ -1290,7 +1290,7 @@ export default function Home() {
                 <div className="lg:col-span-6 xl:col-span-6 relative flex items-center justify-center">
                   <img
                     src="/assets/Mainlogo.png"
-                    alt="Scam Shield 3D AI Protection"
+                    alt="Kinkeeper 3D AI Protection"
                     className="w-full max-w-[700px] lg:max-w-[780px] xl:max-w-[860px] h-auto object-contain select-none pointer-events-none filter drop-shadow-lg"
                   />
                 </div>
@@ -1605,7 +1605,7 @@ export default function Home() {
                             ? result.text.slice(0, 200) + "…"
                             : result.text;
                           const shareText = [
-                            `🚨 SCAM ALERT — Scam Shield Analysis`,
+                            `🚨 SCAM ALERT — Kinkeeper Analysis`,
                             ``,
                             `Risk Score: ${result.riskScore}/100 (${verdictLabel})`,
                             ``,
@@ -1617,7 +1617,7 @@ export default function Home() {
                             `Analysed message:`,
                             `"${preview}"`,
                             ``,
-                            `— Checked with Scam Shield`,
+                            `— Checked with Kinkeeper`,
                           ].join("\n");
                           try {
                             await navigator.clipboard.writeText(shareText);
@@ -2955,7 +2955,7 @@ export default function Home() {
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
-                <span>Your data is not stored or submitted by Scam Shield.</span>
+                <span>Your data is not stored or submitted by Kinkeeper.</span>
               </div>
 
               <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">

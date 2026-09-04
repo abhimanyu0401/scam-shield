@@ -1,7 +1,7 @@
 /**
  * lib/ai/errors.ts
  *
- * Typed error hierarchy for the Scam Shield AI resilience subsystem.
+ * Typed error hierarchy for the Kinkeeper AI resilience subsystem.
  *
  * Design rules:
  *   - Every error is a typed subclass of AIProviderError.
@@ -237,7 +237,7 @@ export class ServerError extends AIProviderError {
 
 /**
  * The provider returned HTTP 200 but the response body does not conform to
- * the expected 5-field Scam Shield JSON schema.
+ * the expected 5-field Kinkeeper JSON schema.
  *
  * isRetryable: true (try the next model — this model may be misconfigured)
  * countsAsCircuitFailure: false (the provider is reachable and responded)
