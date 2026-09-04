@@ -18,7 +18,7 @@ Beyond individual checks, Scam Shield introduces **Scam Radar** and **Trust Circ
 ### Core Multi-Modal Scam Analysis (Phases 1–8 & 10) — ✅ COMPLETED
 - **Text Analysis:** Fast multi-signal heuristic evaluation covering urgency keywords, payment demands, and known scam patterns.
 - **Screenshot / Vision OCR:** Gemini Vision OCR extraction converting images of fake bank alerts, WhatsApp messages, and receipts into normalized text.
-- **Voice Note / Call Audio:** Audio file transcription and acoustic cadence analysis (.mp3, .wav, .m4a, .ogg, .webm, .aac) with scripted call-center phrasing, automated IVR cues, silence artifact suppression, and Unicode-hardened word-boundary detection.
+- **Voice Note / Call Audio:** Audio file transcription and acoustic cadence analysis (.mp3, .wav, .m4a, .ogg, .webm, .aac, .flac) with scripted call-center phrasing, automated IVR cues, silence artifact suppression, and Unicode-hardened word-boundary detection.
 - **28 Curated Indian Scam Scripts:** Static semantic vector library (`gemini-embedding-001`) covering lottery, electricity disconnection, digital arrest, job/task fraud, and KYC expiry schemes.
 - **Live Threat Intelligence:** Google Safe Browsing Lookup API v4 integrated concurrently to catch zero-day phishing links without blocking response times.
 - **Citizen Action Workflows:** Plain-language English and Hindi explanations, Department of Telecommunications (DoT) Chakshu complaint draft generator with entity extraction, automatic routing to 1930 / cybercrime.gov.in on detected financial loss, and one-tap WhatsApp alert formatting.

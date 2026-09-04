@@ -8,6 +8,8 @@ import { AudioInput } from "@/app/components/AudioInput";
 import { CircleDetailView } from "@/app/components/CircleDetailView";
 import { HomeDashboard } from "@/app/components/HomeDashboard";
 import NotificationPopover from "./components/NotificationPopover";
+import NotificationToastContainer from "./components/NotificationToastContainer";
+import { useLiveNotifications } from "@/lib/hooks/useLiveNotifications";
 
 interface CheckResult {
   analysisId?: string;
@@ -90,38 +92,31 @@ function MiniRiskBadge({ score }: { score: number }) {
   );
 }
 
-// Multi-harmonic organic wave polygon generator for fluid theme transitions
-function generateOrganicWavePoints(
-  originX: number,
-  originY: number,
-  radius: number,
-  phase: number = 0,
-  numPoints: number = 48
-): string {
-  if (radius <= 0) {
-    return Array.from({ length: numPoints }, () => `${originX.toFixed(1)}px ${originY.toFixed(1)}px`).join(", ");
+export type ThemePreference = "system" | "light" | "dark";
+
+function getSystemTheme(): "light" | "dark" {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function resolveInitialTheme(): { preference: ThemePreference; theme: "light" | "dark" } {
+  if (typeof window === "undefined") {
+    return { preference: "system", theme: "dark" };
   }
-
-  const points: string[] = [];
-  for (let i = 0; i < numPoints; i++) {
-    const angle = (2 * Math.PI * i) / numPoints;
-    // Multi-harmonic curved wave profile with sweeping organic crests
-    const waveModifier =
-      1 +
-      0.16 * Math.sin(3 * angle + phase) +
-      0.09 * Math.cos(5 * angle - phase * 1.5) +
-      0.05 * Math.sin(7 * angle + phase * 2);
-
-    const r = radius * waveModifier;
-    const x = originX + r * Math.cos(angle);
-    const y = originY + r * Math.sin(angle);
-    points.push(`${x.toFixed(1)}px ${y.toFixed(1)}px`);
-  }
-
-  return points.join(", ");
+  try {
+    const saved = localStorage.getItem("themePreference");
+    if (saved === "light" || saved === "dark") {
+      return { preference: saved, theme: saved };
+    }
+    if (saved === "system") {
+      return { preference: "system", theme: getSystemTheme() };
+    }
+  } catch {}
+  return { preference: "system", theme: getSystemTheme() };
 }
 
 export default function Home() {
+  const [themePreference, setThemePreference] = useState<ThemePreference>("system");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const isTransitioningTheme = useRef(false);
   const [waveOverlay, setWaveOverlay] = useState<{
@@ -129,6 +124,43 @@ export default function Home() {
     originX: number;
     originY: number;
   } | null>(null);
+
+  // Sync theme with localStorage and system media query on mount
+  useEffect(() => {
+    const initial = resolveInitialTheme();
+    setThemePreference(initial.preference);
+    setTheme(initial.theme);
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+      // Check current stored preference (source of truth)
+      let currentPref: ThemePreference = "system";
+      try {
+        const saved = localStorage.getItem("themePreference");
+        if (saved === "light" || saved === "dark" || saved === "system") {
+          currentPref = saved as ThemePreference;
+        }
+      } catch {}
+
+      // Only follow OS theme if user preference is "system"
+      if (currentPref === "system") {
+        const newTheme = e.matches ? "dark" : "light";
+        setTheme(newTheme);
+        if (typeof document !== "undefined") {
+          document.documentElement.classList.toggle("dark", newTheme === "dark");
+        }
+      }
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleSystemThemeChange);
+      return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
+    } else if ((mediaQuery as any).addListener) {
+      (mediaQuery as any).addListener(handleSystemThemeChange);
+      return () => (mediaQuery as any).removeListener(handleSystemThemeChange);
+    }
+  }, []);
 
   const handleThemeToggle = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -139,6 +171,19 @@ export default function Home() {
       const originX = rect.left + rect.width / 2;
       const originY = rect.top + rect.height / 2;
 
+      const applyNextTheme = () => {
+        setTheme(nextTheme);
+        setThemePreference(nextTheme);
+        try {
+          localStorage.setItem("themePreference", nextTheme);
+        } catch (err) {
+          console.warn("Failed to persist themePreference to localStorage:", err);
+        }
+        if (typeof document !== "undefined") {
+          document.documentElement.classList.toggle("dark", nextTheme === "dark");
+        }
+      };
+
       // Use native View Transitions API when available (Chrome, Edge, Safari 18+)
       if (typeof document !== "undefined" && "startViewTransition" in document) {
         isTransitioningTheme.current = true;
@@ -147,26 +192,26 @@ export default function Home() {
           Math.max(originX, window.innerWidth - originX),
           Math.max(originY, window.innerHeight - originY)
         );
-
-        // Frame polygons (48 vertices each for smooth GPU interpolation)
-        const startPoly = `polygon(${generateOrganicWavePoints(originX, originY, 0, 0)})`;
-        const midPoly1 = `polygon(${generateOrganicWavePoints(originX, originY, maxDist * 0.4, 0.8)})`;
-        const midPoly2 = `polygon(${generateOrganicWavePoints(originX, originY, maxDist * 0.95, 1.6)})`;
-        const endPoly = `polygon(${generateOrganicWavePoints(originX, originY, maxDist * 1.8, 2.4)})`;
+        // Add a 15% buffer so the circle smoothly clears all corners well before the animation ends,
+        // completely preventing any end-of-animation stall or sudden snap.
+        const endRadius = Math.ceil(maxDist * 1.15);
 
         const transition = (document as any).startViewTransition(() => {
-          setTheme(nextTheme);
+          applyNextTheme();
         });
 
         transition.ready
           .then(() => {
             const anim = document.documentElement.animate(
               {
-                clipPath: [startPoly, midPoly1, midPoly2, endPoly],
+                clipPath: [
+                  `circle(0px at ${originX}px ${originY}px)`,
+                  `circle(${endRadius}px at ${originX}px ${originY}px)`,
+                ],
               },
               {
-                duration: 1100,
-                easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+                duration: 700,
+                easing: "cubic-bezier(0.4, 0, 0.2, 1)",
                 pseudoElement: "::view-transition-new(root)",
               }
             );
@@ -191,12 +236,12 @@ export default function Home() {
           originY,
         });
         setTimeout(() => {
-          setTheme(nextTheme);
-        }, 550);
+          applyNextTheme();
+        }, 350);
         setTimeout(() => {
           setWaveOverlay(null);
           isTransitioningTheme.current = false;
-        }, 1100);
+        }, 700);
       }
     },
     [theme]
@@ -391,8 +436,19 @@ export default function Home() {
     }
   }, [groups, selectedCircle]);
 
+  // Circle deep linking navigation handler
+  const navigateToCircle = useCallback((circleId: string) => {
+    setSelectedCircle(circleId);
+    setSelectedCircleDetailId(circleId);
+    handleNavClick("circle");
+  }, [handleNavClick]);
 
-
+  // Unified live notifications state (Single Source of Truth)
+  const liveNotifications = useLiveNotifications({
+    user,
+    refreshTrigger: circleRefreshTrigger,
+    onNavigateToCircle: navigateToCircle,
+  });
 
   // Copy button states
   const [shareAlertCopied, setShareAlertCopied] = useState(false);
@@ -802,6 +858,7 @@ export default function Home() {
 
   return (
     <div
+      suppressHydrationWarning
       className={`min-h-screen font-sans flex flex-col justify-between transition-colors duration-300 ${
         isDark ? "dark bg-[#060911] text-slate-100" : "bg-[#FFFFFF] text-slate-900"
       }`}
@@ -994,11 +1051,15 @@ export default function Home() {
               <div className="flex items-center gap-2 sm:gap-3">
                 <NotificationPopover
                   isDark={isDark}
-                  onNavigateToCircle={(circleId) => {
-                    setSelectedCircle(circleId);
-                    handleNavClick("circle");
-                  }}
-                  refreshTrigger={circleRefreshTrigger}
+                  onNavigateToCircle={navigateToCircle}
+                  notifications={liveNotifications.notifications}
+                  unreadCount={liveNotifications.unreadCount}
+                  loading={liveNotifications.loading}
+                  onMarkAsRead={liveNotifications.markAsRead}
+                  onMarkAllRead={liveNotifications.markAllAsRead}
+                  desktopPermission={liveNotifications.desktopPermission}
+                  onRequestDesktopPermission={liveNotifications.requestDesktopPermission}
+                  onRefresh={liveNotifications.refresh}
                 />
                 
                 <button
@@ -3613,24 +3674,26 @@ export default function Home() {
         <AuthModal theme={theme} onClose={() => setAuthModalOpen(false)} />
       )}
 
-      {/* Fallback Wave Overlay for browsers without View Transitions API */}
+      {/* Fallback Ripple Overlay for browsers without View Transitions API */}
       {waveOverlay && (
         <div
           className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden"
           style={{
             backgroundColor: waveOverlay.color,
-            clipPath: `polygon(${generateOrganicWavePoints(
-              waveOverlay.originX,
-              waveOverlay.originY,
-              typeof window !== "undefined"
-                ? Math.hypot(window.innerWidth, window.innerHeight) * 1.8
-                : 2000,
-              1.5
-            )})`,
-            animation: "wave-fallback-expand 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+            clipPath: `circle(${typeof window !== "undefined" ? Math.hypot(window.innerWidth, window.innerHeight) * 1.15 : 2200}px at ${waveOverlay.originX}px ${waveOverlay.originY}px)`,
+            animation: "theme-ripple-expand 700ms cubic-bezier(0.4, 0, 0.2, 1) forwards",
           }}
         />
       )}
+
+      {/* Live In-App Toast Container */}
+      <NotificationToastContainer
+        toasts={liveNotifications.toasts}
+        isDark={isDark}
+        onDismiss={liveNotifications.dismissToast}
+        onNavigateToCircle={navigateToCircle}
+        onMarkAsRead={liveNotifications.markAsRead}
+      />
     </div>
   );
 }
