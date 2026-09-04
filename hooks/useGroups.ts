@@ -121,12 +121,15 @@ export function useGroups(user: any) {
       }
 
       const formatted = data.map((item: any) => {
-        const meta = metaMap[item.groups.id] || metaMap[item.groups.invite_code] || {};
+        const idMeta = metaMap[item.groups.id];
+        const codeMeta = metaMap[item.groups.invite_code];
+        const description = (idMeta?.description ?? codeMeta?.description) ?? null;
+        const createdAt = idMeta?.createdAt ?? codeMeta?.createdAt ?? item.groups.created_at ?? null;
         return {
           id: item.groups.id,
           name: item.groups.name,
-          description: meta.description ?? null,
-          created_at: meta.createdAt ?? item.groups.created_at ?? null,
+          description,
+          created_at: createdAt,
           invite_code: item.groups.invite_code,
           role: item.role,
           member_count: memberCountMap[item.groups.id] || 1
@@ -196,6 +199,17 @@ export function useGroups(user: any) {
       const updatedGroups = await fetchGroups();
       const createdGroup = updatedGroups.find((g: any) => g.invite_code === code);
       if (createdGroup) {
+        fetch('/api/circles/meta', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            circleId: createdGroup.id,
+            inviteCode: code,
+            description,
+            createdAt,
+          })
+        }).catch(() => {});
+
         fetch(`/api/circles/${createdGroup.id}/activity`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

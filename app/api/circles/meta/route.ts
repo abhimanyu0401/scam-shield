@@ -64,7 +64,11 @@ export async function GET(req: NextRequest) {
         if (raw) {
           const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
           if (parsed.circleId) {
-            resultMap[parsed.circleId] = parsed;
+            resultMap[parsed.circleId] = {
+              ...resultMap[parsed.circleId],
+              ...parsed,
+              description: parsed.description ?? resultMap[parsed.circleId]?.description ?? null,
+            };
           }
           resultMap[code] = parsed;
         }
@@ -78,13 +82,19 @@ export async function GET(req: NextRequest) {
         const supabase = await createClient();
         const { data: dbGroups } = await supabase
           .from("groups")
-          .select("id, created_at")
+          .select("id, created_at, invite_code")
           .in("id", missingIds);
 
         for (const g of dbGroups || []) {
           if (g.created_at) {
             if (!resultMap[g.id]) resultMap[g.id] = {};
             if (!resultMap[g.id].createdAt) resultMap[g.id].createdAt = g.created_at;
+          }
+          if (g.invite_code && resultMap[g.invite_code]) {
+            if (!resultMap[g.id]) resultMap[g.id] = {};
+            if (resultMap[g.id].description === undefined && resultMap[g.invite_code].description !== undefined) {
+              resultMap[g.id].description = resultMap[g.invite_code].description;
+            }
           }
         }
       } catch (dbErr) {
