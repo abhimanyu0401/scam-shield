@@ -29,6 +29,9 @@ Full architecture reference: [`roadmap.md`](./roadmap.md) · Live status: [`STAT
   - Multi-group alert sharing with server-side membership authorization.
   - Semantic clustering that groups identical or mutating scam variants together in real time.
   - Named community confirmations and member-level report deletion.
+- **Analytics & Engagement:**
+  - **User Dashboard:** Aggregate personal report statistics, view top scam categories with color-coded analysis, and monitor activity across all joined circles.
+  - **Activity Notifications:** Stay updated with a real-time notification system tracking unread alerts and circle events.
 
 ---
 
@@ -87,6 +90,9 @@ Kinkeeper implements automatic, client-synchronized UI state:
        │                      └── Redis Storage (circle:{id} + canonical report:{id}, 60d TTL)
        ▼
 [Circle UI / Scam Radar] ──► Automatic Sync + "N similar reports" cluster indicators
+       │
+       ▼
+[Analytics & Alerts] ────► [/api/dashboard] & [/api/notifications]
 ```
 
 ### Storage Layer

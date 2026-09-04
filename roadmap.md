@@ -54,8 +54,12 @@ Beyond individual checks, Kinkeeper introduces **Scam Radar** and **Trust Circle
   - Reactive automatic UI updates on report sharing, voting, and deletion without requiring a browser reload.
   - Open report modals dynamically synchronize with updated vote states.
   - Non-destructive background updates preserve rendered feed items without full-page spinner flashes.
-  - Automatic clearing of transient analysis inputs and results upon navigating away or signing out.
-  - Manual Refresh (`↻`) button retained as a user-controlled fallback mechanism.
+  - **Transient State Clearing:** Analysis session inputs and results are automatically cleared when navigating away from the Analyze screen after sharing, and when signing out.
+- **Manual Refresh Fallback:** A manual refresh button (`↻`) is available in the Circle header as a user-controlled fallback.
+
+### Analytics & Notifications (Phase 14) — ✅ COMPLETED
+- **Dashboard Analytics:** Aggregation of personal scam reports, top scam category identification, and circle activity feeds via `[/api/dashboard]`.
+- **Notification Subsystem:** Real-time tracking of unread activity alerts across user circles with bulk read-marking via `[/api/notifications]`.
 
 ---
 
@@ -78,6 +82,7 @@ Beyond individual checks, Kinkeeper introduces **Scam Radar** and **Trust Circle
 │  - Vision OCR / Audio    - Cosine Similarity Matching (>0.75)│
 │  - Server Embedding      - Per-Circle Cluster Assignment    │
 │  [/api/circles/reports/[id]/vote]  [/api/circles/reports/[id]]│
+│  [/api/dashboard]        [/api/notifications]               │
 └──────────────────────────────┬──────────────────────────────┘
                                │
                ┌───────────────┴───────────────┐
