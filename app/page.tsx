@@ -7,6 +7,7 @@ import { AuthModal } from "@/app/components/AuthModal";
 import { AudioInput } from "@/app/components/AudioInput";
 import { CircleDetailView } from "@/app/components/CircleDetailView";
 import { HomeDashboard } from "@/app/components/HomeDashboard";
+import NotificationPopover from "./components/NotificationPopover";
 
 interface CheckResult {
   analysisId?: string;
@@ -880,8 +881,17 @@ export default function Home() {
                 Sign In / Sign Up
               </button>
             ) : (
-              /* Authenticated User: Profile Badge */
-              <>
+              /* Authenticated User: Notifications & Profile Badge */
+              <div className="flex items-center gap-2 sm:gap-3">
+                <NotificationPopover
+                  isDark={isDark}
+                  onNavigateToCircle={(circleId) => {
+                    setSelectedCircle(circleId);
+                    handleNavClick("circle");
+                  }}
+                  refreshTrigger={circleRefreshTrigger}
+                />
+                
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1016,7 +1026,7 @@ export default function Home() {
                     </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
         </nav>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { Redis } from "@upstash/redis";
 import { setVote, getVoteSummary, type VoteType } from "@/lib/redis/votes";
+import { notifyReportOwner } from "@/lib/notifications/create";
 
 const redis = new Redis({
   url: process.env.REDIS_KV_REST_API_URL!,
@@ -127,6 +128,43 @@ export async function POST(
 
     // 8. Return updated summary immediately
     const summary = await getVoteSummary(cleanReportId);
+
+    // 9. Fire REPORT_CONFIRMED notification (awaited)
+    if (vote === "confirm" && report.userId && report.userId !== user.id) {
+      try {
+        // Resolve first circle name for the message (report may belong to multiple circles)
+        let circleName = "your Circle";
+        const groupIds: string[] = Array.isArray(report.groupIds) ? report.groupIds : [];
+        if (groupIds.length > 0) {
+          const { data: circleRows } = await supabase
+            .from("groups")
+            .select("id, name")
+            .in("id", groupIds)
+            .limit(1);
+          if (circleRows && circleRows[0]?.name) {
+            circleName = circleRows[0].name;
+          }
+        }
+
+        await notifyReportOwner(
+          report.userId,
+          user.id,
+          "REPORT_CONFIRMED",
+          "Report confirmed",
+          `A member confirmed your scam alert in ${circleName}.`,
+          {
+            circle_id: groupIds[0] ?? null,
+            report_id: cleanReportId,
+            metadata: {},
+            // Idempotent per voter per report — re-confirming does not create a new notification
+            event_key: `REPORT_CONFIRMED:${cleanReportId}:${user.id}`,
+          },
+          supabase
+        );
+      } catch (notifErr) {
+        console.error("[Notifications] REPORT_CONFIRMED notification failed (non-fatal):", notifErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,

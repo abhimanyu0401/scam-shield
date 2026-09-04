@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { verifyCircleMembership } from "@/lib/auth/verify-circle-membership";
 import { Redis } from "@upstash/redis";
+import { notifyCircleMembers } from "@/lib/notifications/create";
 
 const redis = new Redis({
   url: process.env.REDIS_KV_REST_API_URL!,
@@ -211,6 +212,33 @@ export async function DELETE(
 
       await redis.lpush(`circle:activity:${auth.circleId}`, JSON.stringify(eventItem));
       await redis.ltrim(`circle:activity:${auth.circleId}`, 0, 99);
+
+      // MEMBER_LEFT notification — notify remaining members (awaited)
+      try {
+        const { data: circleRow } = await supabase
+          .from("groups")
+          .select("name")
+          .eq("id", auth.circleId)
+          .single();
+        const circleName = circleRow?.name ?? "your Circle";
+
+        // Exclude the removed user from notifications
+        // Unique per recipient: MEMBER_LEFT:<circleId>:<removedUserId>:<recipientId>
+        await notifyCircleMembers(
+          auth.circleId,
+          targetUserId,
+          "MEMBER_LEFT",
+          "Member left",
+          `${targetName} left ${circleName}.`,
+          {
+            actor_id: currentUserId,
+            event_key_prefix: `MEMBER_LEFT:${auth.circleId}:${targetUserId}`,
+          },
+          supabase
+        );
+      } catch (notifErr) {
+        console.error("[Notifications] MEMBER_LEFT notification failed (non-fatal):", notifErr);
+      }
     } catch (actErr) {
       console.warn("Failed to log MEMBER_LEFT activity:", actErr);
     }

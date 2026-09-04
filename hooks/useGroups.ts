@@ -250,15 +250,19 @@ export function useGroups(user: any) {
         throw joinError;
       }
       
-      // Log explicit activity event at the source
-      fetch(`/api/circles/${groupId}/activity`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'MEMBER_JOINED',
-          message: `${user.user_metadata?.display_name || user.email?.split("@")[0] || 'New member'} joined the circle`
-        })
-      }).catch(() => {});
+      // Log explicit activity event at the source and trigger MEMBER_JOINED notifications
+      try {
+        await fetch(`/api/circles/${groupId}/activity`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'MEMBER_JOINED',
+            message: `${user.user_metadata?.display_name || user.email?.split("@")[0] || 'New member'} joined the circle`
+          })
+        });
+      } catch (actErr) {
+        console.warn("Failed to log activity event:", actErr);
+      }
 
       dispatch({ type: 'SET_ACTION_STATE', status: 'success', message: `Successfully joined ${groupData[0].name}!` });
       dispatch({ type: 'SET_INPUT', field: 'joinInviteCode', value: '' });
