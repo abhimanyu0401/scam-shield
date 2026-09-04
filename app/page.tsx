@@ -6,6 +6,7 @@ import { useGroups } from '@/hooks/useGroups';
 import { AuthModal } from "@/app/components/AuthModal";
 import { AudioInput } from "@/app/components/AudioInput";
 import { CircleDetailView } from "@/app/components/CircleDetailView";
+import { HomeDashboard } from "@/app/components/HomeDashboard";
 
 interface CheckResult {
   analysisId?: string;
@@ -1023,96 +1024,110 @@ export default function Home() {
 
       {/* Main Content Area */}
       <main className="w-full flex-1 max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 space-y-16 sm:space-y-24 pb-28 sm:pb-36">
-        {/* 1. HERO SECTION (Full Initial Viewport on Laptop/Desktop, Reference Image 2) */}
-        <section id="home-section" className="min-h-[calc(85vh-100px)] flex items-center pt-2 sm:pt-4 lg:pt-6 pb-2 sm:pb-4 scroll-mt-24">
-          <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 xl:gap-20 items-center">
-            {/* Left Column: Badge, Title, Description, Buttons, Trust Line */}
-            <div className="lg:col-span-6 xl:col-span-6 space-y-6 sm:space-y-8 text-left">
-              {/* Pill Badge */}
-              <div
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold tracking-wider uppercase shadow-2xs ${
-                  isDark
-                    ? "bg-blue-950/60 border border-blue-800/80 text-sky-400"
-                    : "bg-blue-50/90 border border-blue-200/80 text-[#1D68FF]"
-                }`}
-              >
-                <span className="text-xs sm:text-sm">✦</span>
-                <span>AI-Powered Protection</span>
-              </div>
+        {/* 1. HOME SECTION — Dashboard for authenticated users, Hero for public */}
+        <section id="home-section" className="scroll-mt-24 pt-2 sm:pt-4">
+          {user ? (
+            /* ── Authenticated: Premium Dashboard ── */
+            <HomeDashboard
+              displayName={displayName}
+              isDark={isDark}
+              onNavigateToCircle={() => handleNavClick("circle")}
+              onNavigateToAnalyse={() => handleNavClick("analyse")}
+              refreshTrigger={circleRefreshTrigger}
+            />
+          ) : (
+            /* ── Public: Original Hero Section ── */
+            <div className="min-h-[calc(85vh-100px)] flex items-center pb-2 sm:pb-4">
+              <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 xl:gap-20 items-center">
+                {/* Left Column: Badge, Title, Description, Buttons, Trust Line */}
+                <div className="lg:col-span-6 xl:col-span-6 space-y-6 sm:space-y-8 text-left">
+                  {/* Pill Badge */}
+                  <div
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold tracking-wider uppercase shadow-2xs ${
+                      isDark
+                        ? "bg-blue-950/60 border border-blue-800/80 text-sky-400"
+                        : "bg-blue-50/90 border border-blue-200/80 text-[#1D68FF]"
+                    }`}
+                  >
+                    <span className="text-xs sm:text-sm">✦</span>
+                    <span>AI-Powered Protection</span>
+                  </div>
 
-              {/* Main Headline */}
-              <h1
-                className={`text-5xl sm:text-6xl md:text-7xl lg:text-[72px] xl:text-[80px] font-black tracking-tight leading-[1.05] ${
-                  isDark ? "text-white" : "text-slate-950"
-                }`}
-              >
-                Stay Ahead of <br className="hidden sm:inline" />
-                Every <span className="text-[#1D68FF]">Scam</span>
-              </h1>
+                  {/* Main Headline */}
+                  <h1
+                    className={`text-5xl sm:text-6xl md:text-7xl lg:text-[72px] xl:text-[80px] font-black tracking-tight leading-[1.05] ${
+                      isDark ? "text-white" : "text-slate-950"
+                    }`}
+                  >
+                    Stay Ahead of <br className="hidden sm:inline" />
+                    Every <span className="text-[#1D68FF]">Scam</span>
+                  </h1>
 
-              {/* Description */}
-              <p className={`text-base sm:text-lg md:text-xl lg:text-[21px] leading-relaxed max-w-2xl ${isDark ? "text-slate-400" : "text-slate-600"}`}>
-                Scam Shield uses multi-signal AI to detect and analyze suspicious messages, links, images and voice notes before you fall victim.
-              </p>
+                  {/* Description */}
+                  <p className={`text-base sm:text-lg md:text-xl lg:text-[21px] leading-relaxed max-w-2xl ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+                    Scam Shield uses multi-signal AI to detect and analyze suspicious messages, links, images and voice notes before you fall victim.
+                  </p>
 
-              {/* Dual Action Buttons */}
-              <div className="flex flex-wrap items-center gap-4 pt-2">
-                <button
-                  onClick={() => handleNavClick("analyse")}
-                  className={`px-8 sm:px-9 py-4 sm:py-4.5 rounded-2xl active:scale-95 font-extrabold text-base sm:text-lg tracking-wide shadow-2xs flex items-center gap-3 cursor-pointer transition-all border-2 ${
-                    isDark
-                      ? "bg-[#111625] hover:bg-white/5 border-slate-800 text-slate-200"
-                      : "bg-white hover:bg-slate-50 border-blue-200/90 text-slate-800"
-                  }`}
-                >
-                  <svg className="w-5 h-5 text-[#1D68FF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
-                  <span>Analyse a Scam</span>
-                </button>
+                  {/* Dual Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-4 pt-2">
+                    <button
+                      onClick={() => handleNavClick("analyse")}
+                      className={`px-8 sm:px-9 py-4 sm:py-4.5 rounded-2xl active:scale-95 font-extrabold text-base sm:text-lg tracking-wide shadow-2xs flex items-center gap-3 cursor-pointer transition-all border-2 ${
+                        isDark
+                          ? "bg-[#111625] hover:bg-white/5 border-slate-800 text-slate-200"
+                          : "bg-white hover:bg-slate-50 border-blue-200/90 text-slate-800"
+                      }`}
+                    >
+                      <svg className="w-5 h-5 text-[#1D68FF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                      <span>Analyse a Scam</span>
+                    </button>
 
-                <button
-                  onClick={() => handleNavClick("circle")}
-                  className="px-8 sm:px-9 py-4 sm:py-4.5 rounded-2xl bg-[#1D68FF] hover:bg-[#1558db] active:scale-95 text-white font-extrabold text-base sm:text-lg tracking-wide shadow-xl shadow-blue-500/25 flex items-center gap-3 cursor-pointer transition-all"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                  <span>My Circles</span>
-                </button>
-              </div>
+                    <button
+                      onClick={() => handleNavClick("circle")}
+                      className="px-8 sm:px-9 py-4 sm:py-4.5 rounded-2xl bg-[#1D68FF] hover:bg-[#1558db] active:scale-95 text-white font-extrabold text-base sm:text-lg tracking-wide shadow-xl shadow-blue-500/25 flex items-center gap-3 cursor-pointer transition-all"
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                      <span>My Circles</span>
+                    </button>
+                  </div>
 
-              {/* Trust Line (Matching Reference Image 2 & 4) */}
-              <div className={`flex flex-wrap items-center gap-4 sm:gap-6 text-sm sm:text-base md:text-lg font-medium pt-3 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-[#1D68FF] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
-                  <span className={isDark ? "text-slate-300" : "text-slate-600"}>100% Private</span>
+                  {/* Trust Line */}
+                  <div className={`flex flex-wrap items-center gap-4 sm:gap-6 text-sm sm:text-base md:text-lg font-medium pt-3 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-[#1D68FF] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                      <span className={isDark ? "text-slate-300" : "text-slate-600"}>100% Private</span>
+                    </div>
+                    <span className="text-slate-300 select-none">•</span>
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-[#1D68FF] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                      <span className={isDark ? "text-slate-300" : "text-slate-600"}>Secure</span>
+                    </div>
+                  </div>
                 </div>
-                <span className="text-slate-300 select-none">•</span>
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-[#1D68FF] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                  <span className={isDark ? "text-slate-300" : "text-slate-600"}>Secure</span>
+
+                {/* Right Column: Hero image */}
+                <div className="lg:col-span-6 xl:col-span-6 relative flex items-center justify-center">
+                  <img
+                    src="/assets/hero_img.png"
+                    alt="Scam Shield 3D AI Protection"
+                    className="w-full max-w-[700px] lg:max-w-[780px] xl:max-w-[860px] h-auto object-contain select-none pointer-events-none filter drop-shadow-lg"
+                  />
                 </div>
               </div>
             </div>
-
-            {/* Right Column: Exact 3D Artwork using hero_img.png (Reference Image 2) */}
-            <div className="lg:col-span-6 xl:col-span-6 relative flex items-center justify-center">
-              <img
-                src="/assets/hero_img.png"
-                alt="Scam Shield 3D AI Protection"
-                className="w-full max-w-[700px] lg:max-w-[780px] xl:max-w-[860px] h-auto object-contain select-none pointer-events-none filter drop-shadow-lg"
-              />
-            </div>
-          </div>
+          )}
         </section>
 
         {/* 2. ANALYSE SECTION */}
