@@ -3,6 +3,7 @@ import { Redis } from "@upstash/redis";
 import { verifyCircleMembership } from "@/lib/auth/verify-circle-membership";
 import { createClient } from "@/lib/supabase/server";
 import { getVotesDetailed, type VoteRecord } from "@/lib/redis/votes";
+import { notifyCircleMembers } from "@/lib/notifications/create";
 
 const redis = new Redis({
   url: process.env.REDIS_KV_REST_API_URL!,
@@ -265,6 +266,54 @@ export async function POST(
     // Append to Redis list and keep latest 100 events
     await redis.lpush(`circle:activity:${auth.circleId}`, JSON.stringify(eventItem));
     await redis.ltrim(`circle:activity:${auth.circleId}`, 0, 99);
+
+    // Fire notifications (awaited — failures never abort the activity recording)
+    if (type === "MEMBER_JOINED" || type === "CIRCLE_UPDATED") {
+      try {
+        const supabase = await createClient();
+        const { data: circleRow } = await supabase
+          .from("groups")
+          .select("name")
+          .eq("id", auth.circleId)
+          .single();
+        const circleName = circleRow?.name ?? "your Circle";
+        const actorName =
+          auth.user.user_metadata?.display_name ||
+          auth.user.email?.split("@")[0] ||
+          "A member";
+
+        if (type === "MEMBER_JOINED") {
+          // Unique per recipient: MEMBER_JOINED:<circleId>:<newMemberId>:<recipientId>
+          await notifyCircleMembers(
+            auth.circleId,
+            auth.user.id,
+            "MEMBER_JOINED",
+            "New member joined",
+            `${actorName} joined ${circleName}.`,
+            {
+              actor_id: auth.user.id,
+              event_key_prefix: `MEMBER_JOINED:${auth.circleId}:${auth.user.id}`,
+            },
+            supabase
+          );
+        } else if (type === "CIRCLE_UPDATED") {
+          await notifyCircleMembers(
+            auth.circleId,
+            auth.user.id,
+            "CIRCLE_UPDATED",
+            "Circle updated",
+            `${circleName} was updated by an admin.`,
+            {
+              actor_id: auth.user.id,
+              event_key_prefix: `CIRCLE_UPDATED:${auth.circleId}:${auth.user.id}`,
+            },
+            supabase
+          );
+        }
+      } catch (notifErr) {
+        console.error("[Notifications] Activity notification failed (non-fatal):", notifErr);
+      }
+    }
 
     return NextResponse.json({ success: true, event: eventItem });
   } catch (err: any) {

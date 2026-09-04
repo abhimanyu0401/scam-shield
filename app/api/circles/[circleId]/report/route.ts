@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 import { verifyMultipleCircleMemberships } from "@/lib/auth/verify-circle-membership";
+import { notifyCircleMembers, notifyReportOwner } from "@/lib/notifications/create";
+import { createClient } from "@/lib/supabase/server";
 
 const redis = new Redis({
   url: process.env.REDIS_KV_REST_API_URL!,
@@ -203,6 +205,76 @@ export async function POST(
       await redis.del(`analysis:${cleanAnalysisId}`);
     } catch (delErr) {
       console.warn("Failed to delete consumed analysis key:", delErr);
+    }
+
+    // 11. Persist notifications (awaited — failures never abort the report save)
+    try {
+      // Resolve circle names once for notification messages
+      const supabase = await createClient();
+      const { data: circleRows } = await supabase
+        .from("groups")
+        .select("id, name")
+        .in("id", cleanGroupIds);
+      const circleNameMap: Record<string, string> = {};
+      for (const c of circleRows ?? []) {
+        if (c.id && c.name) circleNameMap[c.id] = c.name;
+      }
+
+      for (const gid of cleanGroupIds) {
+        const circleName = circleNameMap[gid] ?? "your Circle";
+
+        // REPORT_SHARED → notify all circle members except reporter
+        // Unique per recipient: REPORT_SHARED:<reportId>:<circleId>:<actorId>:<recipientId>
+        await notifyCircleMembers(
+          gid,
+          auth.user.id,
+          "REPORT_SHARED",
+          "New scam report",
+          `A member shared a new scam alert in ${circleName}.`,
+          {
+            report_id: newId,
+            actor_id: auth.user.id,
+            metadata: { riskScore: cleanRiskScore },
+            event_key_prefix: `REPORT_SHARED:${newId}:${gid}:${auth.user.id}`,
+          },
+          supabase
+        );
+
+        // SCAM_CLUSTER_DETECTED → if this report matched an existing one
+        const assignedClusterId = clusterIds[gid];
+        if (assignedClusterId && assignedClusterId !== newId) {
+          // The report was clustered with an existing report — find its owner
+          try {
+            const rawOriginal = await redis.get(`report:${assignedClusterId}`);
+            const originalReport: { userId?: string } | null = rawOriginal
+              ? typeof rawOriginal === "string"
+                ? JSON.parse(rawOriginal)
+                : (rawOriginal as { userId?: string })
+              : null;
+
+            if (originalReport?.userId && originalReport.userId !== auth.user.id) {
+              await notifyReportOwner(
+                originalReport.userId,
+                auth.user.id,
+                "SCAM_CLUSTER_DETECTED",
+                "Similar scam detected",
+                `Another member reported a similar scam in ${circleName}. Scam Radar found a match with your report.`,
+                {
+                  circle_id: gid,
+                  report_id: assignedClusterId,
+                  metadata: { matchedReportId: newId, riskScore: cleanRiskScore },
+                  event_key: `SCAM_CLUSTER:${assignedClusterId}:${newId}`,
+                },
+                supabase
+              );
+            }
+          } catch (clusterNotifErr) {
+            console.warn("[Notifications] Failed SCAM_CLUSTER_DETECTED lookup:", clusterNotifErr);
+          }
+        }
+      }
+    } catch (notifErr) {
+      console.error("[Notifications] REPORT_SHARED notification failed (non-fatal):", notifErr);
     }
 
     return NextResponse.json({ success: true, report: newReport });
