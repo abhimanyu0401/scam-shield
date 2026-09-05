@@ -46,6 +46,8 @@ export interface UseLiveNotificationsReturn {
   loading: boolean;
   toasts: ToastItem[];
   desktopPermission: NotificationPermission | "unsupported";
+  notificationsEnabled: boolean;
+  setNotificationsEnabled: (enabled: boolean) => void;
   dismissToast: (id: string) => void;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
@@ -62,6 +64,15 @@ export function useLiveNotifications({
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [notificationsEnabled, setNotificationsEnabledState] = useState<boolean>(() => {
+    if (typeof window !== "undefined" && user?.id) {
+      const stored = localStorage.getItem(`scamshield_notifications_enabled_${user.id}`);
+      if (stored !== null) {
+        return stored === "true";
+      }
+    }
+    return false;
+  });
   const [desktopPermission, setDesktopPermission] = useState<
     NotificationPermission | "unsupported"
   >(() => {
@@ -71,6 +82,11 @@ export function useLiveNotifications({
     return "unsupported";
   });
 
+  const notificationsEnabledRef = useRef(notificationsEnabled);
+  useEffect(() => {
+    notificationsEnabledRef.current = notificationsEnabled;
+  }, [notificationsEnabled]);
+
   // Keep references to prevent stale closures and overlapping requests
   const userRef = useRef(user);
   const onNavigateToCircleRef = useRef(onNavigateToCircle);
@@ -79,6 +95,34 @@ export function useLiveNotifications({
     userRef.current = user;
     onNavigateToCircleRef.current = onNavigateToCircle;
   }, [user, onNavigateToCircle]);
+
+  // Synchronize notificationsEnabled and desktopPermission per user account
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ("Notification" in window) {
+      setDesktopPermission(Notification.permission);
+    }
+    if (user?.id) {
+      const stored = localStorage.getItem(`scamshield_notifications_enabled_${user.id}`);
+      const enabled = stored !== null ? stored === "true" : false;
+      setNotificationsEnabledState(enabled);
+      notificationsEnabledRef.current = enabled;
+    } else {
+      setNotificationsEnabledState(false);
+      notificationsEnabledRef.current = false;
+    }
+  }, [user?.id]);
+
+  const setNotificationsEnabled = useCallback((enabled: boolean) => {
+    setNotificationsEnabledState(enabled);
+    notificationsEnabledRef.current = enabled;
+    if (typeof window !== "undefined" && userRef.current?.id) {
+      localStorage.setItem(`scamshield_notifications_enabled_${userRef.current.id}`, enabled ? "true" : "false");
+    }
+    if (!enabled) {
+      setToasts([]);
+    }
+  }, []);
 
   // Baseline tracking & Session-local deduplication sets
   const knownNotificationIdsRef = useRef<Set<string>>(new Set());
@@ -152,7 +196,7 @@ export function useLiveNotifications({
         }
       }
 
-      if (genuinelyNew.length > 0) {
+      if (genuinelyNew.length > 0 && notificationsEnabledRef.current) {
         // Sort newest first by created_at
         genuinelyNew.sort(
           (a, b) =>
@@ -328,6 +372,8 @@ export function useLiveNotifications({
     loading,
     toasts,
     desktopPermission,
+    notificationsEnabled,
+    setNotificationsEnabled,
     dismissToast,
     markAsRead,
     markAllAsRead,

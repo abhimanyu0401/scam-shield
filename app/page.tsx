@@ -9,6 +9,7 @@ import { CircleDetailView } from "@/app/components/CircleDetailView";
 import { HomeDashboard } from "@/app/components/HomeDashboard";
 import NotificationPopover from "./components/NotificationPopover";
 import NotificationToastContainer from "./components/NotificationToastContainer";
+import NotificationOnboardingModal from "./components/NotificationOnboardingModal";
 import { useLiveNotifications } from "@/lib/hooks/useLiveNotifications";
 
 interface CheckResult {
@@ -250,6 +251,7 @@ export default function Home() {
   const [appMode, setAppMode] = useState<"personal" | "radar">("personal");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [showNotificationOnboarding, setShowNotificationOnboarding] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [selectedCircleDetailId, setSelectedCircleDetailId] = useState<string | null>(null);
   const [circleRefreshTrigger, setCircleRefreshTrigger] = useState<number>(0);
@@ -449,6 +451,42 @@ export default function Home() {
     refreshTrigger: circleRefreshTrigger,
     onNavigateToCircle: navigateToCircle,
   });
+
+  // Prompt first-time logged in user with dedicated notification onboarding modal
+  useEffect(() => {
+    if (!user || authLoading) return;
+    if (typeof window === "undefined") return;
+
+    const key = `scamshield_notif_prompted_${user.id}`;
+    const alreadyPrompted = localStorage.getItem(key);
+
+    if (!alreadyPrompted && !liveNotifications.notificationsEnabled) {
+      const timer = setTimeout(() => {
+        setShowNotificationOnboarding(true);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [user, authLoading, liveNotifications.notificationsEnabled]);
+
+  const handleDismissNotificationOnboarding = useCallback(() => {
+    setShowNotificationOnboarding(false);
+    if (user && typeof window !== "undefined") {
+      localStorage.setItem(`scamshield_notif_prompted_${user.id}`, "true");
+      liveNotifications.setNotificationsEnabled(false);
+    }
+  }, [user, liveNotifications]);
+
+  const handleEnableNotificationsFromModal = useCallback(async () => {
+    let result: NotificationPermission | "unsupported" = liveNotifications.desktopPermission;
+    if (liveNotifications.desktopPermission === "default") {
+      result = await liveNotifications.requestDesktopPermission();
+    }
+    liveNotifications.setNotificationsEnabled(true);
+    if (user && typeof window !== "undefined") {
+      localStorage.setItem(`scamshield_notif_prompted_${user.id}`, "true");
+    }
+    return result;
+  }, [user, liveNotifications]);
 
   // Copy button states
   const [shareAlertCopied, setShareAlertCopied] = useState(false);
@@ -1164,6 +1202,52 @@ export default function Home() {
 
                     <div className={`h-px my-2 ${isDark ? "bg-slate-800" : "bg-slate-100"}`} />
 
+                    {/* Notification On/Off Toggle */}
+                    <div className={`px-3 py-2 rounded-xl flex items-center justify-between transition-colors ${
+                      isDark ? "hover:bg-white/5" : "hover:bg-blue-50/50"
+                    }`}>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-6 h-6 rounded-lg bg-blue-500/10 text-[#1D68FF] flex items-center justify-center flex-shrink-0">
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                          </svg>
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold block truncate">Notifications</span>
+                          <span className={`text-[10px] block truncate ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                            {liveNotifications.notificationsEnabled ? "Alerts active" : "Alerts muted"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Switch Button */}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={liveNotifications.notificationsEnabled}
+                        onClick={async () => {
+                          const nextState = !liveNotifications.notificationsEnabled;
+                          if (nextState && liveNotifications.desktopPermission === "default") {
+                            await liveNotifications.requestDesktopPermission();
+                          }
+                          liveNotifications.setNotificationsEnabled(nextState);
+                        }}
+                        className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          liveNotifications.notificationsEnabled ? "bg-[#1D68FF]" : isDark ? "bg-slate-700" : "bg-slate-300"
+                        }`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                            liveNotifications.notificationsEnabled ? "translate-x-4" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    <div className={`h-px my-2 ${isDark ? "bg-slate-800" : "bg-slate-100"}`} />
+
                     <div>
                       {signOutError && (
                         <div className="px-3 mb-1">
@@ -1568,7 +1652,7 @@ export default function Home() {
                         onClick={() => {
                           setResult(null);
                           setShowDetailedAnalysis(false);
-                          document.getElementById("active-tool-view")?.scrollIntoView({ behavior: "smooth" });
+                          document.getElementById("analyse-section")?.scrollIntoView({ behavior: "smooth" });
                         }}
                         className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#1D68FF] hover:underline cursor-pointer mb-1"
                       >
@@ -3407,6 +3491,18 @@ export default function Home() {
                   type="text"
                   value={joinInviteCode}
                   onChange={(e) => dispatch({ type: "SET_INPUT", field: "joinInviteCode", value: e.target.value })}
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (joinInviteCode.trim() && groupActionStatus !== "loading") {
+                        await handleJoinGroup();
+                        await fetchAllCirclesFeed();
+                        if (groupActionStatus === "success") {
+                          setTimeout(() => setShowJoinCircleModal(false), 1200);
+                        }
+                      }
+                    }
+                  }}
                   placeholder="Paste invite code here"
                   className={`w-full rounded-xl px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#1D68FF] border transition-all ${
                     isDark ? "bg-[#090D16] border-slate-800 text-white" : "bg-slate-50 border-slate-200 text-slate-900"
@@ -3654,11 +3750,16 @@ export default function Home() {
                     financialLossLikely: selectedActivityReport.riskScore > 75,
                     analysisId: selectedActivityReport.id,
                   };
+                  setSelectedActivityReport(null);
+                  setSelectedCircleDetailId(null);
+                  setAppMode("personal");
                   setResult(selectedCheckResult);
                   setShowDetailedAnalysis(true);
-                  setSelectedActivityReport(null);
-                  setAppMode("personal");
-                  document.getElementById("active-tool-view")?.scrollIntoView({ behavior: "smooth" });
+                  handleNavClick("analyse");
+                  setTimeout(() => {
+                    const el = document.getElementById("results-card") || document.getElementById("analyse-section");
+                    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 80);
                 }}
                 className="px-6 py-2.5 rounded-xl bg-[#1D68FF] hover:bg-[#1558db] text-white text-xs sm:text-sm font-black flex items-center gap-2 shadow-lg shadow-blue-500/30 transition-all cursor-pointer active:scale-95"
               >
@@ -3672,6 +3773,14 @@ export default function Home() {
 
       {authModalOpen && (
         <AuthModal theme={theme} onClose={() => setAuthModalOpen(false)} />
+      )}
+
+      {showNotificationOnboarding && (
+        <NotificationOnboardingModal
+          isDark={isDark}
+          onEnable={handleEnableNotificationsFromModal}
+          onDismiss={handleDismissNotificationOnboarding}
+        />
       )}
 
       {/* Fallback Ripple Overlay for browsers without View Transitions API */}
